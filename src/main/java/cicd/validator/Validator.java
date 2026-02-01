@@ -74,21 +74,19 @@ public class Validator {
             }
         }
     }
-    
-    private void checkNeeds() {
-        // rule 5: needs must reference existing jobs in same stage
-        for (Job j : p.jobs.values()) {
-            for (String need : j.needs) {
-                Job other = p.jobs.get(need);
-                if (other == null) {
-                    errors.add(file + ":" + j.needsLine + ":" + j.needsCol + ": job `" + j.name + "` needs `" + need + "` which does not exist");
-                } else if (!Objects.equals(j.stage, other.stage)) {
-                    errors.add(file + ":" + j.needsLine + ":" + j.needsCol + ": job `" + j.name + "` needs `" + need + "` which is in a different stage");
-                }
-            }
+
+  private void checkNeeds() {
+    for (Job j : p.jobs.values()) {
+      for (String need : j.needs) {
+        if (!p.jobs.containsKey(need)) {
+          errors.add(file + ":" + j.needsLine + ":" + j.needsCol +
+              ": job `" + j.name + "` needs `" + need + "` which does not exist");
         }
+      }
     }
-    
+  }
+
+
     private void checkCycles() {
         // rule 6: no cycles in needs (per stage)
         Map<String, List<String>> graph = new HashMap<>();
