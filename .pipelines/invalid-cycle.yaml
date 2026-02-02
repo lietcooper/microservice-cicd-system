@@ -1,0 +1,19 @@
+pipeline:
+  name: cycle-test
+
+stages:
+  - build
+
+job1:
+  stage: build
+  image: alpine
+  script: echo 1
+  needs:
+    - job2
+
+job2:
+  stage: build
+  image: alpine
+  script: echo 2
+  needs:
+    - job1

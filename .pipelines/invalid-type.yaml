@@ -1,0 +1,10 @@
+pipeline:
+  name: 123
+
+stages:
+  - build
+
+compile:
+  stage: build
+  image: alpine
+  script: echo hi
