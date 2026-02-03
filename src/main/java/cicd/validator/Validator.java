@@ -1,7 +1,14 @@
 package cicd.validator;
 
-import cicd.model.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import cicd.model.Job;
+import cicd.model.Pipeline;
 
 public class Validator {
     
@@ -15,7 +22,9 @@ public class Validator {
     }
     
     public List<String> validate() {
-        if (p == null) return errors;
+        if (p == null) {
+            return errors;
+        }
         
         checkStages();
         checkJobs();
@@ -75,16 +84,16 @@ public class Validator {
         }
     }
 
-  private void checkNeeds() {
-    for (Job j : p.jobs.values()) {
-      for (String need : j.needs) {
-        if (!p.jobs.containsKey(need)) {
-          errors.add(file + ":" + j.needsLine + ":" + j.needsCol +
-              ": job `" + j.name + "` needs `" + need + "` which does not exist");
+    private void checkNeeds() {
+        for (Job j : p.jobs.values()) {
+            for (String need : j.needs) {
+                if (!p.jobs.containsKey(need)) {
+                    errors.add(file + ":" + j.needsLine + ":" + j.needsCol
+                        + ": job `" + j.name + "` needs `" + need + "` which does not exist");
+                }
+            }
         }
-      }
     }
-  }
 
 
     private void checkCycles() {
@@ -112,17 +121,23 @@ public class Validator {
         if (path.contains(node)) {
             // trim path to start of cycle
             int idx = path.indexOf(node);
-            while (idx-- > 0) path.remove(0);
+            while (idx-- > 0) {
+                path.remove(0);
+            }
             return true;
         }
-        if (visited.contains(node)) return false;
+        if (visited.contains(node)) {
+            return false;
+        }
         
         visited.add(node);
         path.add(node);
         
         List<String> neighbors = graph.getOrDefault(node, List.of());
         for (String next : neighbors) {
-            if (hasCycle(next, graph, visited, path)) return true;
+            if (hasCycle(next, graph, visited, path)) {
+                return true;
+            }
         }
         
         path.remove(path.size() - 1);
