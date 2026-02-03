@@ -111,7 +111,7 @@ public class Validator {
                 Job j = p.jobs.get(start);
                 int line = j.needsLine > 0 ? j.needsLine : j.line;
                 int col = j.needsCol > 0 ? j.needsCol : j.col;
-                errors.add(file + ":" + line + ":" + col + ": cycle detected in `needs` requirements. " + String.join(" -> ", path));
+                errors.add(file + ":" + line + ":" + col + ": cycle detected in `needs` requirements. " + String.join(" -> ", path)+ ".");
                 return; // report first cycle only
             }
         }
