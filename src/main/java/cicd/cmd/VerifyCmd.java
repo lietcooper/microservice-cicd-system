@@ -1,21 +1,21 @@
 package cicd.cmd;
 
-import cicd.model.*;
+import cicd.model.Pipeline;
 import cicd.parser.YamlParser;
 import cicd.validator.Validator;
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Parameters;
 import java.io.File;
 import java.util.List;
 import java.util.concurrent.Callable;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Parameters;
 
-@Command(
+@Command (
     name = "verify",
     description = "Validate a pipeline YAML configuration file"
 )
 public class VerifyCmd implements Callable<Integer> {
 
-  @Parameters(
+  @Parameters (
       index = "0",
       defaultValue = ".pipelines/pipeline.yaml",
       description = "Path to YAML file (default: .pipelines/pipeline.yaml)"

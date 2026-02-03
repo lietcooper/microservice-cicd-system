@@ -1,10 +1,17 @@
 package cicd.parser;
 
-import cicd.model.*;
+import cicd.model.Job;
+import cicd.model.Pipeline;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.util.ArrayList;
+import java.util.List;
 import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.nodes.*;
-import java.io.*;
-import java.util.*;
+import org.yaml.snakeyaml.nodes.MappingNode;
+import org.yaml.snakeyaml.nodes.Node;
+import org.yaml.snakeyaml.nodes.NodeTuple;
+import org.yaml.snakeyaml.nodes.ScalarNode;
+import org.yaml.snakeyaml.nodes.SequenceNode;
 
 public class YamlParser {
 
@@ -77,26 +84,33 @@ public class YamlParser {
           ScalarNode scalar = (ScalarNode) val;
           String tag = scalar.getTag().getValue();
           if (isNonStringTag(tag)) {
-            err(val, "wrong type of value given for `name` key. Expected value of type String, given " + scalar.getValue());
+            err(val,
+                "wrong type of value given for `name` key. Expected value of type String, given "
+                    + scalar.getValue());
           } else {
             p.name = scalar.getValue();
             p.nameLine = val.getStartMark().getLine() + 1;
             p.nameCol = val.getStartMark().getColumn() + 1;
           }
         } else {
-          err(val, "wrong type of value given for `name` key. Expected value of type String, given " + nodeType(val));
+          err(val, "wrong type of value given for `name` key. Expected value of type String, given "
+              + nodeType(val));
         }
       } else if ("description".equals(key)) {
         if (val instanceof ScalarNode) {
           ScalarNode scalar = (ScalarNode) val;
           String tag = scalar.getTag().getValue();
           if (isNonStringTag(tag)) {
-            err(val, "wrong type of value given for `description` key. Expected value of type String, given " + scalar.getValue());
+            err(val,
+                "wrong type of value given for `description` key. Expected value of type String, given "
+                    + scalar.getValue());
           } else {
             p.desc = scalar.getValue();
           }
         } else {
-          err(val, "wrong type of value given for `description` key. Expected value of type String, given " + nodeType(val));
+          err(val,
+              "wrong type of value given for `description` key. Expected value of type String, given "
+                  + nodeType(val));
         }
       }
     }
@@ -123,13 +137,17 @@ public class YamlParser {
         if (val instanceof ScalarNode) {
           j.stage = ((ScalarNode) val).getValue();
         } else {
-          err(val, "wrong type of value given for `stage` key. Expected value of type String, given " + nodeType(val));
+          err(val,
+              "wrong type of value given for `stage` key. Expected value of type String, given "
+                  + nodeType(val));
         }
       } else if ("image".equals(key)) {
         if (val instanceof ScalarNode) {
           j.image = ((ScalarNode) val).getValue();
         } else {
-          err(val, "wrong type of value given for `image` key. Expected value of type String, given " + nodeType(val));
+          err(val,
+              "wrong type of value given for `image` key. Expected value of type String, given "
+                  + nodeType(val));
         }
       } else if ("script".equals(key)) {
         j.script = strOrList(val, "script");
@@ -145,8 +163,11 @@ public class YamlParser {
   private List<String> strList(Node node, String field) {
     List<String> result = new ArrayList<>();
     if (!(node instanceof SequenceNode)) {
-      String actual = (node instanceof ScalarNode) ? ((ScalarNode) node).getValue() : nodeType(node);
-      err(node, "wrong type of value given for `" + field + "` key. Expected value of type List, given " + actual);
+      String actual =
+          (node instanceof ScalarNode) ? ((ScalarNode) node).getValue() : nodeType(node);
+      err(node,
+          "wrong type of value given for `" + field + "` key. Expected value of type List, given "
+              + actual);
       return result;
     }
     for (Node n : ((SequenceNode) node).getValue()) {
@@ -169,9 +190,15 @@ public class YamlParser {
   }
 
   private String nodeType(Node node) {
-    if (node instanceof ScalarNode) return ((ScalarNode) node).getValue();
-    if (node instanceof SequenceNode) return "List";
-    if (node instanceof MappingNode) return "Mapping";
+    if (node instanceof ScalarNode) {
+      return ((ScalarNode) node).getValue();
+    }
+    if (node instanceof SequenceNode) {
+      return "List";
+    }
+    if (node instanceof MappingNode) {
+      return "Mapping";
+    }
     return "unknown";
   }
 
