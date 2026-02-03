@@ -1,10 +1,19 @@
 package cicd.parser;
 
-import cicd.model.*;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.nodes.*;
-import java.io.*;
-import java.util.*;
+import org.yaml.snakeyaml.nodes.MappingNode;
+import org.yaml.snakeyaml.nodes.Node;
+import org.yaml.snakeyaml.nodes.NodeTuple;
+import org.yaml.snakeyaml.nodes.ScalarNode;
+import org.yaml.snakeyaml.nodes.SequenceNode;
+
+import cicd.model.Job;
+import cicd.model.Pipeline;
 
 public class YamlParser {
     
@@ -72,24 +81,24 @@ public class YamlParser {
             String key = str(t.getKeyNode());
             Node val = t.getValueNode();
 
-          if ("name".equals(key)) {
-            if (val instanceof ScalarNode) {
-              ScalarNode scalar = (ScalarNode) val;
-              // check if it's actually a string, not int/float/bool
-              String tag = scalar.getTag().getValue();
-              if (tag.equals("tag:yaml.org,2002:int") ||
-                  tag.equals("tag:yaml.org,2002:float") ||
-                  tag.equals("tag:yaml.org,2002:bool")) {
-                err(val, "wrong type of value given for `name` key. Expected value of type String, given " + tagToType(tag));
-              } else {
-                p.name = scalar.getValue();
-                p.nameLine = val.getStartMark().getLine() + 1;
-                p.nameCol = val.getStartMark().getColumn() + 1;
-              }
-            } else {
-              err(val, "wrong type of value given for `name` key. Expected value of type String, given " + nodeType(val));
+            if ("name".equals(key)) {
+                if (val instanceof ScalarNode) {
+                    ScalarNode scalar = (ScalarNode) val;
+                    // check if it's actually a string, not int/float/bool
+                    String tag = scalar.getTag().getValue();
+                    if (tag.equals("tag:yaml.org,2002:int")
+                        || tag.equals("tag:yaml.org,2002:float")
+                        || tag.equals("tag:yaml.org,2002:bool")) {
+                        err(val, "wrong type of value given for `name` key. Expected value of type String, given " + tagToType(tag));
+                    } else {
+                        p.name = scalar.getValue();
+                        p.nameLine = val.getStartMark().getLine() + 1;
+                        p.nameCol = val.getStartMark().getColumn() + 1;
+                    }
+                } else {
+                    err(val, "wrong type of value given for `name` key. Expected value of type String, given " + nodeType(val));
+                }
             }
-          }
         }
     }
     
@@ -164,8 +173,12 @@ public class YamlParser {
                 return "String";
             }
         }
-        if (node instanceof SequenceNode) return "List";
-        if (node instanceof MappingNode) return "Mapping";
+        if (node instanceof SequenceNode) {
+            return "List";
+        }
+        if (node instanceof MappingNode) {
+            return "Mapping";
+        }
         return "unknown";
     }
     
@@ -175,10 +188,16 @@ public class YamlParser {
         errors.add(file + ":" + line + ":" + col + ": " + msg);
     }
 
-  private String tagToType(String tag) {
-    if (tag.contains("int")) return "Integer";
-    if (tag.contains("float")) return "Float";
-    if (tag.contains("bool")) return "Boolean";
-    return "unknown";
-  }
+    private String tagToType(String tag) {
+        if (tag.contains("int")) {
+            return "Integer";
+        }
+        if (tag.contains("float")) {
+            return "Float";
+        }
+        if (tag.contains("bool")) {
+            return "Boolean";
+        }
+        return "unknown";
+    }
 }
