@@ -16,7 +16,7 @@ None
 
 ## What Worked
 
-- Created all issues and assigned them on the first day of the sprint, so everyone knew what to do
+- Created all issues and assigned them 
 - Issue #3 (project init) was completed first since other coding tasks depend on it
 - Combined related work (#4 parser + #5 validation + #6 error reporting) into one PR to reduce merge conflicts
 - Each PR was linked to its corresponding issue using `Closes #x`
