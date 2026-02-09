@@ -86,7 +86,13 @@ public class Validator {
 
   private void checkNeeds() {
     for (Job j : p.jobs.values()) {
+      // check for duplicate entries in needs
+      Set<String> seen = new HashSet<>();
       for (String need : j.needs) {
+        if (!seen.add(need)) {
+          errors.add(file + ":" + j.needsLine + ":" + j.needsCol
+              + ": job `" + j.name + "` has duplicate entry `" + need + "` in `needs`");
+        }
         if (!p.jobs.containsKey(need)) {
           errors.add(file + ":" + j.needsLine + ":" + j.needsCol
               + ": job `" + j.name + "` needs `" + need + "` which does not exist");
