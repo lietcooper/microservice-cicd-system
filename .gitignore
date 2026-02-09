@@ -5,6 +5,7 @@ build/
 # IDE
 .idea/
 *.iml
+.vscode/
 
 # OS
 .DS_Store
@@ -14,4 +15,4 @@ build/
 !README.md
 
 !dev-docs
-!dev-docs/**.md
+!dev-docs/**/*.md
