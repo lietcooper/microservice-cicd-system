@@ -227,4 +227,5 @@ class DryrunCmdTest {
 
     assertEquals(expected.stripIndent(), output);
   }
+
 }
