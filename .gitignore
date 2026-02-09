@@ -14,4 +14,4 @@ build/
 !README.md
 
 !dev-docs
-!dev-docs/**.md
+!dev-docs/**/*.md
