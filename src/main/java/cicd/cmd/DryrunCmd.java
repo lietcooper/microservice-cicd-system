@@ -1,5 +1,8 @@
 package cicd.cmd;
 
+import cicd.executor.ExecutionPlanner;
+import cicd.executor.ExecutionPlanner.StageExecution;
+import cicd.model.Job;
 import cicd.model.Pipeline;
 import cicd.parser.YamlParser;
 import cicd.validator.Validator;
@@ -54,8 +57,34 @@ public class DryrunCmd implements Callable<Integer> {
       return 1;
     }
 
-    // TODO: compute execution order and print dryrun output (A2 + A3)
-    System.out.println("Dryrun: pipeline is valid. Execution order output coming soon.");
+    // compute execution order and print dryrun output
+    ExecutionPlanner planner = new ExecutionPlanner(pipeline);
+    List<StageExecution> plan = planner.computeOrder();
+    System.out.print(formatDryrun(plan));
     return 0;
+  }
+
+  /**
+   * Formats the execution plan as valid YAML output.
+   * Format follows the requirements specification:
+   * stage -> job -> image + script.
+   */
+  static String formatDryrun(List<StageExecution> plan) {
+    StringBuilder sb = new StringBuilder();
+
+    for (StageExecution stage : plan) {
+      sb.append(stage.getStageName()).append(":\n");
+
+      for (Job job : stage.getJobs()) {
+        sb.append("    ").append(job.name).append(":\n");
+        sb.append("        image: ").append(job.image).append("\n");
+        sb.append("        script:\n");
+        for (String cmd : job.script) {
+          sb.append("        - ").append(cmd).append("\n");
+        }
+      }
+    }
+
+    return sb.toString();
   }
 }
