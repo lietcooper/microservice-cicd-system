@@ -2,16 +2,16 @@
 
 ## Completed
 
-| Issue                                                                                                               | Assignee | Estimate |
-|---------------------------------------------------------------------------------------------------------------------|----------|----------|
-| [#22 Implement dryrun subcommand framework](https://github.com/CS7580-SEA-SP26/d-team/issues/22)                    | @TODO | 2pt      |
-| [#23 Implement execution order calculation (topological sort)](https://github.com/CS7580-SEA-SP26/d-team/issues/23) | @TODO | 2pt      |
-| [#24 Implement dryrun formatted output and unit tests](https://github.com/CS7580-SEA-SP26/d-team/issues/23)         | @TODO | 1pt      |
-| [#25 Create high-level design diagram](https://github.com/CS7580-SEA-SP26/d-team/issues/25)                         | @TODO | 3pt      |
-| [#26 Document alternative designs](https://github.com/CS7580-SEA-SP26/d-team/issues/26)                             | @TODO | 2pt      |
-| [#16 Create pipeline execution sequence diagram](https://github.com/CS7580-SEA-SP26/d-team/issues/16)               | @TODO | 2pt      |
-| [#17 Create report request sequence diagram](https://github.com/CS7580-SEA-SP26/d-team/issues/17)                   | @TODO | 2pt      |
-| [#18 Integrate sequence diagrams into design docs](https://github.com/CS7580-SEA-SP26/d-team/issues/18)             | @TODO | 1pt      |
+| Issue                                                                                                               | Assignee    | Estimate |
+|---------------------------------------------------------------------------------------------------------------------|-------------|----------|
+| [#22 Implement dryrun subcommand framework](https://github.com/CS7580-SEA-SP26/d-team/issues/22)                    | @Lijun Wan  | 2pt      |
+| [#23 Implement execution order calculation (topological sort)](https://github.com/CS7580-SEA-SP26/d-team/issues/23) | @Lijun Wan  | 2pt      |
+| [#24 Implement dryrun formatted output and unit tests](https://github.com/CS7580-SEA-SP26/d-team/issues/23)         | @Lijun Wan  | 1pt      |
+| [#25 Create high-level design diagram](https://github.com/CS7580-SEA-SP26/d-team/issues/25)                         | @Molly Yang | 3pt      |
+| [#26 Document alternative designs](https://github.com/CS7580-SEA-SP26/d-team/issues/26)                             | @Molly Yang | 2pt      |
+| [#16 Create pipeline execution sequence diagram](https://github.com/CS7580-SEA-SP26/d-team/issues/16)               | @Yange Wang | 2pt      |
+| [#17 Create report request sequence diagram](https://github.com/CS7580-SEA-SP26/d-team/issues/17)                   | @Yange Wang | 2pt      |
+| [#18 Integrate sequence diagrams into design docs](https://github.com/CS7580-SEA-SP26/d-team/issues/18)             | @Yange Wang | 1pt      |
 
 ## Carry Over
 
