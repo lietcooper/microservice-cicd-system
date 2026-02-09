@@ -8,3 +8,10 @@ build/
 
 # OS
 .DS_Store
+
+
+*.md
+!README.md
+
+!dev-docs
+!dev-docs/**.md

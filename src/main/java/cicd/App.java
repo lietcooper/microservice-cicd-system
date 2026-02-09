@@ -1,16 +1,18 @@
 package cicd;
 
+import cicd.cmd.DryrunCmd;
 import cicd.cmd.VerifyCmd;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
-@Command (
+@Command(
     name = "cicd",
     description = "CI/CD pipeline management tool",
     mixinStandardHelpOptions = true,
     version = "0.1.0",
     subcommands = {
-        VerifyCmd.class
+        VerifyCmd.class,
+        DryrunCmd.class
     }
 )
 public class App implements Runnable {
