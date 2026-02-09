@@ -107,6 +107,30 @@ class ValidatorTest {
     assertTrue(errors.stream().anyMatch(e -> e.contains("cycle detected")));
   }
 
+  @Test
+  void duplicateNeeds() throws IOException {
+    String yaml = """
+        pipeline:
+          name: test
+        stages:
+          - build
+        jobA:
+          stage: build
+          image: alpine
+          script: echo A
+        jobB:
+          stage: build
+          image: alpine
+          script: echo B
+          needs:
+            - jobA
+            - jobA
+        """;
+
+    List<String> errors = validate(yaml);
+    assertTrue(errors.stream().anyMatch(e -> e.contains("duplicate entry `jobA` in `needs`")));
+  }
+
   private List<String> validate(String yaml) throws IOException {
     Path f = tmp.resolve("p.yaml");
     Files.writeString(f, yaml);
