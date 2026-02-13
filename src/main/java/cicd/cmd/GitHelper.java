@@ -30,13 +30,16 @@ public class GitHelper {
 
       ProcessBuilder pb = new ProcessBuilder(cmd);
       pb.directory(new File(repoPath));
-      pb.redirectErrorStream(true);
       Process p = pb.start();
 
       BufferedReader reader = new BufferedReader(
           new InputStreamReader(p.getInputStream()));
       String line = reader.readLine();
-      p.waitFor();
+      int exitCode = p.waitFor();
+
+      if (exitCode != 0) {
+        return "";
+      }
       return line != null ? line.trim() : "";
     } catch (Exception e) {
       return "";
