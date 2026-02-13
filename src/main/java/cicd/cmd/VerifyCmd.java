@@ -17,8 +17,8 @@ public class VerifyCmd implements Callable<Integer> {
 
   @Parameters (
       index = "0",
-      defaultValue = ".pipelines/pipeline.yaml",
-      description = "Path to YAML file (default: .pipelines/pipeline.yaml)"
+      defaultValue = ".pipelines/default.yaml",
+      description = "Path to YAML file (default: .pipelines/default.yaml)"
   )
   private File file;
 
