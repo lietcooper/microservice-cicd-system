@@ -1,32 +1,43 @@
 pipeline:
   name: default
-  description: Default build pipeline
+  description: Default build for nightly builds
 
 stages:
   - build
   - test
+  - doc
   - deploy
 
+# Build
 compile:
-  stage: build
-  image: gradle:jdk17
-  script: ./gradlew build
+  - stage: build
+  - image: gradle:jdk21-corretto
+  - script: 'gradle build'
 
-checkstyle:
-  stage: test
-  image: gradle:jdk17
-  script: ./gradlew checkstyleMain
+# Checkstyle & Static Analysis reports
+statics:
+  - stage: test
+  - image: gradle:jdk21-corretto
+  - script:
+      - gradle checkstyleMain
+      - gradle checkstyleTest
+      - gradle spotbugsMain
 
-unittest:
-  stage: test
-  image: gradle:jdk17
-  needs:
-    - checkstyle
-  script:
-    - ./gradlew test
-    - ./gradlew jacocoTestReport
+# Test
+tests:
+  - stage: test
+  - image: gradle:jdk21-corretto
+  - needs: [statics]
+  - script: 'gradle test jacocoTestReport'
 
+# Javadoc
+docs:
+  - stage: doc
+  - image: gradle:jdk21-corretto
+  - script: 'gradle javadoc'
+
+# Packaging
 package:
-  stage: deploy
-  image: gradle:jdk17
-  script: ./gradlew publish
+  - stage: deploy
+  - image: gradle:jdk21-corretto
+  - script: 'gradle assembleDist'
