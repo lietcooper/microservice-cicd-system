@@ -4,6 +4,7 @@ import cicd.cmd.DryrunCmd;
 import cicd.cmd.VerifyCmd;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
+import cicd.cmd.RunCmd;
 
 @Command(
     name = "cicd",
@@ -12,7 +13,8 @@ import picocli.CommandLine.Command;
     version = "0.1.0",
     subcommands = {
         VerifyCmd.class,
-        DryrunCmd.class
+        DryrunCmd.class,
+        RunCmd.class
     }
 )
 public class App implements Runnable {

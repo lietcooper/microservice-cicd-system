@@ -124,12 +124,24 @@ public class YamlParser {
     Job j = new Job();
     j.name = name;
 
-    if (!(node instanceof MappingNode)) {
+    List<NodeTuple> entries;
+
+    if (node instanceof MappingNode) {
+      entries = ((MappingNode) node).getValue();
+    } else if (node instanceof SequenceNode) {
+      entries = new ArrayList<>();
+      for (Node item : ((SequenceNode) node).getValue()) {
+        if (item instanceof MappingNode) {
+          entries.addAll(((MappingNode) item).getValue());
+        }
+      }
+    } else {
       err(node, "job `" + name + "` must be a mapping");
       return j;
     }
 
-    for (NodeTuple t : ((MappingNode) node).getValue()) {
+
+    for (NodeTuple t : entries){
       String key = str(t.getKeyNode());
       Node val = t.getValueNode();
 
