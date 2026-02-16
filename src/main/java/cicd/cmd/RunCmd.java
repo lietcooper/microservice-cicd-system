@@ -1,5 +1,8 @@
 package cicd.cmd;
 
+import cicd.docker.DockerRunner;
+import cicd.docker.LocalDockerRunner;
+import cicd.executor.PipelineExecutor;
 import cicd.model.Pipeline;
 import cicd.parser.YamlParser;
 import cicd.validator.Validator;
@@ -27,6 +30,12 @@ public class RunCmd implements Callable<Integer> {
   @Option(names = "--commit", description = "Git commit (default: HEAD)")
   private String commit;
 
+  private DockerRunner dockerRunner;
+
+  public void setDockerRunner(DockerRunner runner) {
+    this.dockerRunner = runner;
+  }
+
   @Override
   public Integer call() {
     String repoPath = System.getProperty("user.dir");
@@ -36,7 +45,6 @@ public class RunCmd implements Callable<Integer> {
       return 1;
     }
 
-    // --name and --file: exactly one required
     if (name == null && file == null) {
       System.err.println("error: must specify either --name or --file");
       return 1;
@@ -46,7 +54,6 @@ public class RunCmd implements Callable<Integer> {
       return 1;
     }
 
-    // check branch matches
     if (branch != null) {
       String cur = GitHelper.currentBranch(repoPath);
       if (!branch.equals(cur)) {
@@ -56,7 +63,6 @@ public class RunCmd implements Callable<Integer> {
       }
     }
 
-    // check commit matches
     if (commit != null) {
       String full = GitHelper.currentCommitFull(repoPath);
       String shortHash = GitHelper.currentCommit(repoPath);
@@ -67,7 +73,6 @@ public class RunCmd implements Callable<Integer> {
       }
     }
 
-    // resolve pipeline config
     Pipeline pipeline;
     if (name != null) {
       PipelineFinder.FindResult found = PipelineFinder.findByName(name);
@@ -97,9 +102,9 @@ public class RunCmd implements Callable<Integer> {
       pipeline = p;
     }
 
-    // TODO: Person B will add PipelineExecutor call here
-    System.out.println("Pipeline '" + pipeline.name + "' resolved successfully");
-    System.out.println("Ready to execute (executor not yet integrated)");
-    return 0;
+    DockerRunner runner = dockerRunner != null ? dockerRunner : new LocalDockerRunner();
+    PipelineExecutor executor = new PipelineExecutor(runner, repoPath);
+    boolean success = executor.execute(pipeline);
+    return success ? 0 : 1;
   }
 }
