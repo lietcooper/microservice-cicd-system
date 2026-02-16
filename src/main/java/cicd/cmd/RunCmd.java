@@ -1,5 +1,6 @@
 package cicd.cmd;
 
+import cicd.docker.DockerRunner;
 import cicd.model.Pipeline;
 import cicd.parser.YamlParser;
 import cicd.validator.Validator;
@@ -8,6 +9,8 @@ import picocli.CommandLine.Option;
 import java.io.File;
 import java.util.List;
 import java.util.concurrent.Callable;
+import cicd.executor.PipelineExecutor;
+
 
 @Command(
     name = "run",
@@ -97,9 +100,9 @@ public class RunCmd implements Callable<Integer> {
       pipeline = p;
     }
 
-    // TODO: Person B will add PipelineExecutor call here
-    System.out.println("Pipeline '" + pipeline.name + "' resolved successfully");
-    System.out.println("Ready to execute (executor not yet integrated)");
-    return 0;
+    PipelineExecutor executor = new PipelineExecutor(new DockerRunner(), repoPath);
+    boolean success = executor.execute(pipeline);
+    return success ? 0 : 1;
+
   }
 }
