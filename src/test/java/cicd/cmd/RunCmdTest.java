@@ -1,5 +1,6 @@
 package cicd.cmd;
 
+import cicd.docker.MockDockerRunner;
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
 import static org.junit.jupiter.api.Assertions.*;
@@ -44,15 +45,18 @@ class RunCmdTest {
 
   @Test
   void testValidFile() {
-    // 应该走到 "Ready to execute" 那步，返回 0
-    int code = new CommandLine(new RunCmd()).execute(
+    RunCmd cmd = new RunCmd();
+    cmd.setDockerRunner(new MockDockerRunner());
+    int code = new CommandLine(cmd).execute(
         "--file", ".pipelines/default.yaml");
     assertEquals(0, code);
   }
 
   @Test
   void testValidName() {
-    int code = new CommandLine(new RunCmd()).execute(
+    RunCmd cmd = new RunCmd();
+    cmd.setDockerRunner(new MockDockerRunner());
+    int code = new CommandLine(cmd).execute(
         "--name", "default");
     assertEquals(0, code);
   }
