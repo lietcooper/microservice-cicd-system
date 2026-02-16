@@ -1,0 +1,9 @@
+pipeline:
+  name: no-stages
+
+stages: []
+
+compile:
+  stage: build
+  image: alpine
+  script: echo hi

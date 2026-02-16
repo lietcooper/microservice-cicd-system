@@ -1,0 +1,19 @@
+pipeline:
+  name: empty-stage
+
+stages:
+  - build
+  - test
+  - deploy
+
+compile:
+  stage: build
+  image: alpine
+  script: echo build
+
+unittest:
+  stage: test
+  image: alpine
+  script: echo test
+
+# "deploy" stage is declared but has no jobs -> invalid
