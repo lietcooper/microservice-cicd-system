@@ -14,6 +14,7 @@ import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientImpl;
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
 import com.github.dockerjava.transport.DockerHttpClient;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -85,9 +86,13 @@ public class LocalDockerRunner implements DockerRunner {
   }
 
   private void pullImage(String image) throws InterruptedException {
-    dockerClient.pullImageCmd(image)
+    boolean done = dockerClient.pullImageCmd(image)
         .start()
         .awaitCompletion(PULL_TIMEOUT_SECS, TimeUnit.SECONDS);
+    if (!done) {
+      throw new RuntimeException(
+          "image pull timed out after " + PULL_TIMEOUT_SECS + " seconds");
+    }
   }
 
   private String createContainer(String image, String command,
@@ -125,7 +130,8 @@ public class LocalDockerRunner implements DockerRunner {
         new ResultCallback.Adapter<>() {
           @Override
           public void onNext(Frame frame) {
-            output.append(new String(frame.getPayload()));
+            output.append(new String(frame.getPayload(),
+                StandardCharsets.UTF_8));
           }
         };
     dockerClient.logContainerCmd(containerId)
@@ -133,7 +139,12 @@ public class LocalDockerRunner implements DockerRunner {
         .withStdErr(true)
         .withFollowStream(false)
         .exec(callback);
-    callback.awaitCompletion(LOG_TIMEOUT_SECS, TimeUnit.SECONDS);
+    boolean done = callback.awaitCompletion(
+        LOG_TIMEOUT_SECS, TimeUnit.SECONDS);
+    if (!done) {
+      output.append("\n[WARNING] log capture timed out after "
+          + LOG_TIMEOUT_SECS + " seconds, output may be incomplete");
+    }
     return output.toString();
   }
 

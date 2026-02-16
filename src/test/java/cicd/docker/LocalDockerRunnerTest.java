@@ -124,6 +124,18 @@ class LocalDockerRunnerTest {
   }
 
   @Test
+  void pullTimeoutReturnsError() throws InterruptedException {
+    when(pullCallback.awaitCompletion(any(Long.class),
+        any(TimeUnit.class))).thenReturn(false);
+
+    JobResult result = runner.runJob("slow:latest",
+        List.of("echo hi"), "/tmp/repo");
+
+    assertFalse(result.ok());
+    assertTrue(result.output.contains("pull timed out"));
+  }
+
+  @Test
   void imageNotFoundReturnsError() {
     when(dockerClient.pullImageCmd(anyString()))
         .thenThrow(new NotFoundException("no such image"));
