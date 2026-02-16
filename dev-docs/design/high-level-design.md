@@ -14,16 +14,18 @@ graph TB
 
     subgraph server [Server - Local or Remote]
         REST[REST Service - Spring Boot]
+        Git[Git Repository - local path or remote URL]
         DS[(DataStore - SQLite / PostgreSQL)]
         Docker[Docker Engine]
 
+        REST -->|"git clone / checkout"| Git
         REST -->|"SQL read/write (bidirectional)"| DS
         DS -->|query results| REST
-        REST -->|"Docker API: pull image, create/start container"| Docker
+        REST -->|"Docker API: pull image, create/start container, mount cloned repo"| Docker
         Docker -->|"container output, exit code"| REST
     end
 
-    CLI -->|"HTTP POST: run pipeline"| REST
+    CLI -->|"HTTP POST: repo URL, branch, commit, pipeline name"| REST
     CLI -->|"HTTP GET: report queries"| REST
     REST -->|"JSON response: status, results, reports"| CLI
 
@@ -36,10 +38,11 @@ graph TB
 
 | From | To | Protocol | Direction | Purpose |
 |------|----|----------|-----------|---------|
-| CLI | REST Service | HTTP/REST | Unidirectional (request) | Submit run requests, query reports |
+| CLI | REST Service | HTTP/REST | Unidirectional (request) | Submit run requests (metadata only: repo URL, branch, commit, pipeline name), query reports |
 | REST Service | CLI | HTTP/REST | Unidirectional (response) | Return execution results, report data |
+| REST Service | Git Repository | Git (JGit / CLI) | Unidirectional | Clone repo at specified branch/commit to obtain pipeline config and source code |
 | REST Service | DataStore | SQL (JDBC) | Bidirectional | Read/write pipeline run records, stage/job status |
-| REST Service | Docker Engine | Docker API (HTTP) | Bidirectional | Pull images, create/start/stop containers, read output |
+| REST Service | Docker Engine | Docker API (HTTP) | Bidirectional | Pull images, create/start/stop containers (with cloned repo mounted as volume), read output |
 
 **Note:** The CLI also performs local-only operations (verify, dryrun) that do not involve the REST Service. These operations parse and validate YAML files entirely within the CLI process.
 
@@ -50,9 +53,9 @@ graph TB
 The CLI (`cicd`) is the primary user-facing interface built with picocli.
 
 **Responsibilities:**
-- Parse and validate pipeline configuration files (YAML v1.2)
+- Parse and validate pipeline configuration files locally for `verify` and `dryrun` (YAML v1.2)
 - Compute and display execution order (dryrun)
-- Send pipeline execution requests to the REST Service
+- For `run`: validate that `--branch`/`--commit` match the current checkout, then send metadata (repo URL, branch, commit, pipeline name) to the REST Service. The CLI does **not** send pipeline config or source code.
 - Display pipeline status and reports to users
 
 **Subcommands:**
@@ -70,16 +73,19 @@ The REST Service is the backend that orchestrates pipeline execution and manages
 
 **Responsibilities:**
 - Receive and process requests from CLI
+- Clone the git repository at the specified branch and commit into a temporary directory
+- Read and validate the pipeline configuration from `.pipelines/` in the cloned repo
 - Manage pipeline execution lifecycle (stages run sequentially, jobs within a stage respect `needs` ordering)
-- Coordinate Docker container operations (pull images, run containers, collect output)
+- Coordinate Docker container operations (pull images, run containers with cloned repo mounted as a volume, collect output)
 - Store and retrieve execution data from DataStore
 - Track git metadata (branch, commit hash, repo) for each run
+- Clean up the cloned temporary directory after the pipeline run completes
 
 **Key Endpoints:**
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/pipelines/run` | Start a pipeline execution |
+| `POST` | `/pipelines/run` | Start a pipeline execution. Payload: `{repoUrl, branch, commit, pipelineName}` |
 | `GET` | `/pipelines/{name}/runs` | Get all runs for a pipeline |
 | `GET` | `/pipelines/{name}/runs/{runNo}` | Get a specific run |
 | `GET` | `/pipelines/{name}/runs/{runNo}/stages/{stage}` | Get a specific stage in a run |

@@ -11,8 +11,8 @@ This document describes the initial architecture for our custom CI/CD system. Th
 The CLI is the primary interface for developers to interact with the CI/CD system.
 
 **Responsibilities:**
-- Parse and validate pipeline configuration files (YAML)
-- Send pipeline execution requests to the REST Service
+- Parse and validate pipeline configuration files locally for `verify` and `dryrun` (YAML)
+- For `run`: validate branch/commit match, then send metadata (repo URL, branch, commit, pipeline name) to the REST Service. The CLI does not send config or source code.
 - Display pipeline status and reports to users
 - Support local development workflows
 
@@ -28,13 +28,15 @@ The REST Service is the backend that orchestrates pipeline execution and manages
 
 **Responsibilities:**
 - Receive and process requests from CLI
+- Clone the git repository at the specified branch/commit to obtain pipeline config and source code
+- Validate the pipeline configuration from the cloned repo
 - Manage pipeline execution lifecycle
-- Coordinate Docker container operations
+- Coordinate Docker container operations (mount cloned repo into containers)
 - Store and retrieve execution data from DataStore
 - Provide API endpoints for pipeline management
 
 **Key Endpoints:**
-- `POST /pipelines/run` - Start a pipeline execution
+- `POST /pipelines/run` - Start a pipeline execution. Payload: `{repoUrl, branch, commit, pipelineName}`
 - `GET /pipelines/{name}/status` - Get pipeline status
 - `GET /pipelines/{name}/runs` - Get execution history
 - `GET /runs/{runId}` - Get specific run details
@@ -61,7 +63,7 @@ The DataStore persists all pipeline execution data and logs.
 ┌─────────────────────────────────────────────────────────────────┐
 │                        Developer Machine                        │
 │  ┌─────────┐                                                    │
-│  │   CLI   │                                                    │
+│  │   CLI   │  (sends metadata only: repo URL, branch, commit)  │
 │  └────┬────┘                                                    │
 └───────┼─────────────────────────────────────────────────────────┘
         │ HTTP/REST
@@ -70,16 +72,16 @@ The DataStore persists all pipeline execution data and logs.
 │                      Server (Local or Remote)                   │
 │  ┌──────────────────┐         ┌─────────────────┐               │
 │  │   REST Service   │◄───────►│    DataStore    │               │
-│  └────────┬─────────┘  SQL    │   (PostgreSQL)  │               │
-│           │                   └─────────────────┘               │
-│           │ Docker API                                          │
-│           ▼                                                     │
-│  ┌──────────────────┐                                           │
-│  │  Docker Engine   │                                           │
-│  │  ┌────┐ ┌────┐   │                                           │
-│  │  │Job1│ │Job2│   │                                           │
-│  │  └────┘ └────┘   │                                           │
-│  └──────────────────┘                                           │
+│  └──┬─────────┬─────┘  SQL    │(SQLite/Postgres)│               │
+│     │         │               └─────────────────┘               │
+│     │ Git     │ Docker API                                      │
+│     ▼         ▼                                                 │
+│  ┌────────┐ ┌──────────────────┐                                │
+│  │Git Repo│ │  Docker Engine   │                                │
+│  │(clone) │ │  ┌────┐ ┌────┐   │                                │
+│  └────────┘ │  │Job1│ │Job2│   │                                │
+│             │  └────┘ └────┘   │                                │
+│             └──────────────────┘                                │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -92,16 +94,21 @@ sequenceDiagram
     participant Dev as Developer
     participant CLI as CLI
     participant REST as REST Service
+    participant Git as Git Repository
     participant DB as DataStore
     participant Docker as Docker Engine
 
     Dev->>CLI: cicd run --name default
-    CLI->>CLI: Load & validate YAML
-    CLI->>REST: POST /pipelines/run
+    CLI->>CLI: Validate branch/commit match current checkout
+    CLI->>CLI: Collect git metadata (repo URL, branch, commit)
+    CLI->>REST: POST /pipelines/run {repoUrl, branch, commit, pipelineName}
+    REST->>Git: Clone repo at branch/commit
+    REST->>REST: Read .pipelines/, validate config
     REST->>DB: Create run record
-    REST->>Docker: Pull image & start container
+    REST->>Docker: Pull image & start container (mount cloned repo)
     Docker-->>REST: Container output
     REST->>DB: Update job/stage status
+    REST->>REST: Clean up cloned temp directory
     REST-->>CLI: Execution result
     CLI-->>Dev: Display result
 ```

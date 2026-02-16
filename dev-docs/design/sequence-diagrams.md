@@ -9,25 +9,31 @@ sequenceDiagram
     participant User
     participant CLI
     participant REST as REST Service (Spring Boot)
-    participant DB as DataStore (PostgreSQL)
+    participant Git as Git Repository
+    participant DB as DataStore (SQLite / PostgreSQL)
     participant Docker as Docker Engine
 
-    User->>CLI: cicd run --config pipeline.yaml
-    CLI->>CLI: parse YAML, validate config
-    CLI->>CLI: collect git metadata (repo, branch, commit hash)
-    CLI->>REST: POST /pipelines/run (config + git info)
+    User->>CLI: cicd run --name default
+    CLI->>CLI: validate --branch/--commit match current checkout
+    CLI->>CLI: collect git metadata (repo URL, branch, commit hash)
+    CLI->>REST: POST /pipelines/run {repoUrl, branch, commit, pipelineName}
+
+    REST->>Git: git clone repoUrl --branch branch
+    Git-->>REST: cloned repo in temp directory
+    REST->>REST: git checkout commit
+    REST->>REST: read .pipelines/, find pipeline by name, validate config
 
     REST->>DB: INSERT pipeline_runs (status=RUNNING, start_time, git info)
     DB-->>REST: run_no
 
-    loop each Stage (sequential, in dependency order)
+    loop each Stage (sequential, in defined order)
         REST->>DB: INSERT stage_runs (status=RUNNING, start_time)
         DB-->>REST: ok
 
         loop each Job (respecting needs order within stage)
             REST->>Docker: pull image (Docker API)
             Docker-->>REST: image ready
-            REST->>Docker: create & start container (script commands)
+            REST->>Docker: create & start container (mount cloned repo, run script)
             Docker-->>REST: container output + exit code 0
             REST->>DB: INSERT job_runs (status=SUCCESS, start_time, end_time)
             DB-->>REST: ok
@@ -39,21 +45,25 @@ sequenceDiagram
 
     REST->>DB: UPDATE pipeline_runs (status=SUCCESS, end_time)
     DB-->>REST: ok
+    REST->>REST: clean up cloned temp directory
     REST-->>CLI: JSON response (run summary, status)
     CLI-->>User: display results
 ```
 
 ### Step Descriptions
 
-- **Parse & validate**: CLI reads the YAML file and validates it locally (same logic as `verify`)
-- **Git metadata**: CLI collects current repo, branch, and commit hash to attach to the run record
-- **POST /pipelines/run**: CLI sends the pipeline config and git info to the REST Service over HTTP
-- **Create pipeline run**: REST Service inserts a new row in `pipeline_runs` table with status RUNNING, DB returns the assigned run_no
-- **Stage loop**: Stages execute sequentially based on dependency order. For each stage, a row is inserted into `stage_runs`
-- **Job loop**: Within a stage, jobs run respecting `needs` ordering. REST Service pulls the Docker image, starts a container, and runs the script commands
-- **Record job result**: After each container finishes, REST Service writes the result to `job_runs` (status, timestamps)
-- **Update stage/pipeline**: Once all jobs in a stage succeed, the stage is marked SUCCESS. After all stages complete, the pipeline run is marked SUCCESS
-- **Return results**: REST Service returns a JSON response with the run summary; CLI formats and displays it
+- **Branch/commit validation**: CLI checks that `--branch` and `--commit` (if provided) match the currently checked-out state. If they don't match, CLI exits with an error (the system does not switch branches).
+- **Git metadata**: CLI collects the current repo URL (local path or remote), branch, and commit hash.
+- **POST /pipelines/run**: CLI sends only metadata (`repoUrl`, `branch`, `commit`, `pipelineName`) to the REST Service over HTTP. No pipeline config or source code is sent.
+- **Git clone**: REST Service clones the repository at the specified branch and checks out the exact commit into a temporary directory. This guarantees that only committed code is used.
+- **Config validation**: REST Service reads `.pipelines/` from the cloned repo, finds the pipeline by name, and validates the config (same rules as `verify`). This is the source of truth -- even if the CLI validated locally, the REST Service re-validates from the committed state.
+- **Create pipeline run**: REST Service inserts a new row in `pipeline_runs` table with status RUNNING, DB returns the assigned run_no.
+- **Stage loop**: Stages execute sequentially in the order defined in the config. For each stage, a row is inserted into `stage_runs`.
+- **Job loop**: Within a stage, jobs run respecting `needs` ordering. REST Service pulls the Docker image, creates a container with the cloned repo mounted as a volume, and runs the script commands.
+- **Record job result**: After each container finishes, REST Service writes the result to `job_runs` (status, timestamps).
+- **Update stage/pipeline**: Once all jobs in a stage succeed, the stage is marked SUCCESS. After all stages complete, the pipeline run is marked SUCCESS.
+- **Cleanup**: REST Service deletes the cloned temporary directory.
+- **Return results**: REST Service returns a JSON response with the run summary; CLI formats and displays it.
 
 ---
 
@@ -66,7 +76,7 @@ sequenceDiagram
     participant User
     participant CLI
     participant REST as REST Service (Spring Boot)
-    participant DB as DataStore (PostgreSQL)
+    participant DB as DataStore (SQLite / PostgreSQL)
 
     User->>CLI: cicd report --pipeline default --run 1
     CLI->>CLI: parse arguments
