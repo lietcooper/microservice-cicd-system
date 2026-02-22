@@ -24,3 +24,6 @@ REPORT_ENDPOINTS_IMPLEMENTATION.md
 test-report-api.sh
 verify-json-assembly.sh
 run-server.sh
+*.log
+pipeline.log
+server.log
