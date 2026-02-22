@@ -5,37 +5,6 @@
 This document expands on the initial design with a detailed high-level architecture for our custom CI/CD system. The system allows developers to define, validate, and execute CI/CD pipelines locally (Phase 1) or remotely (Phase 2). All pipeline configuration is stored as YAML files in the repository under `.pipelines/`.
 
 ## High-Level Design Diagram
-
-```mermaid
-graph TB
-    subgraph devMachine [Developer Machine]
-        CLI[CLI - cicd]
-    end
-
-    subgraph server [Server - Local or Remote]
-        REST[REST Service - Spring Boot]
-        Git[Git Repository - local path or remote URL]
-        DS[(DataStore - SQLite / PostgreSQL)]
-        Docker[Docker Engine]
-
-        REST -->|"git clone / checkout"| Git
-        REST -->|"SQL read/write (bidirectional)"| DS
-        DS -->|query results| REST
-        REST -->|"Docker API: pull image, create/start container, mount cloned repo"| Docker
-        Docker -->|"container output, exit code"| REST
-    end
-
-    CLI -->|"HTTP POST: repo URL, branch, commit, pipeline name"| REST
-    CLI -->|"HTTP GET: report queries"| REST
-    REST -->|"JSON response: status, results, reports"| CLI
-
-    Docker -->|runs| J1[Job Container 1]
-    Docker -->|runs| J2[Job Container 2]
-    Docker -->|runs| J3[Job Container N]
-```
-
-
-updated high-level design
 ```mermaid
 graph LR
     subgraph DeveloperMachine["Developer Machine"]
