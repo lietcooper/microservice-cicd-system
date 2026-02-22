@@ -2,4 +2,14 @@ dependencies {
     implementation project(':common')
     implementation 'com.github.docker-java:docker-java-core:3.3.6'
     implementation 'com.github.docker-java:docker-java-transport-httpclient5:3.3.6'
+
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa:3.2.3'
+    implementation 'org.flywaydb:flyway-core:9.22.3'
+    runtimeOnly 'org.postgresql:postgresql:42.7.2'
+
+    compileOnly 'org.projectlombok:lombok:1.18.30'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test:3.2.3'
+    testRuntimeOnly 'com.h2database:h2:2.2.224'
 }
