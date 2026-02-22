@@ -1,4 +1,4 @@
-package cicd.cmd;
+package cicd.util;
 
 import cicd.model.Pipeline;
 import cicd.parser.YamlParser;

@@ -1,4 +1,4 @@
-package cicd.cmd;
+package cicd.util;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -7,7 +7,6 @@ class GitHelperTest {
 
   @Test
   void testIsGitRootTrue() {
-    // 你的项目根目录有 .git
     assertTrue(GitHelper.isGitRoot(System.getProperty("user.dir")));
   }
 

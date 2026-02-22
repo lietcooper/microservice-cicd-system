@@ -5,6 +5,8 @@ import cicd.docker.LocalDockerRunner;
 import cicd.executor.PipelineExecutor;
 import cicd.model.Pipeline;
 import cicd.parser.YamlParser;
+import cicd.util.GitHelper;
+import cicd.util.PipelineFinder;
 import cicd.validator.Validator;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
