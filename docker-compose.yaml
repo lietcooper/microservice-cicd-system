@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cicd-postgres
+    environment:
+      POSTGRES_DB: cicd
+      POSTGRES_USER: cicd
+      POSTGRES_PASSWORD: cicd
+    ports:
+      - "5432:5432"
+    volumes:
+      - cicd-pgdata:/var/lib/postgresql/data
+
+volumes:
+  cicd-pgdata:

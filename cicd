@@ -1,2 +1,2 @@
 #!/bin/bash
-./gradlew -q run --args="$*" 2>&1 | grep -v -E "^(FAILURE|BUILD|\*|>|$)" 
+./gradlew -q :cli:run --args="$*" 2>&1 | grep -v -E "^(FAILURE|BUILD|\*|>|$)"

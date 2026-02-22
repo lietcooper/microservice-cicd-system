@@ -1,0 +1,27 @@
+plugins {
+    id 'application'
+}
+
+dependencies {
+    implementation project(':common')
+    implementation project(':server')
+    implementation 'info.picocli:picocli:4.7.5'
+}
+
+application {
+    mainClass = 'cicd.App'
+}
+
+run {
+    workingDir = rootDir
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'cicd.App'
+    }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}

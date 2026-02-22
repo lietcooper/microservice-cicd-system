@@ -5,41 +5,61 @@
 This document expands on the initial design with a detailed high-level architecture for our custom CI/CD system. The system allows developers to define, validate, and execute CI/CD pipelines locally (Phase 1) or remotely (Phase 2). All pipeline configuration is stored as YAML files in the repository under `.pipelines/`.
 
 ## High-Level Design Diagram
-
 ```mermaid
-graph TB
-    subgraph devMachine [Developer Machine]
-        CLI[CLI - cicd]
+graph LR
+    subgraph DeveloperMachine["Developer Machine"]
+        CLI["🟡 CLI"]
+        Common["🟢 Common\nLib/utility"]
     end
 
-    subgraph server [Server - Local or Remote]
-        REST[REST Service - Spring Boot]
-        DS[(DataStore - SQLite / PostgreSQL)]
-        Docker[Docker Engine]
-
-        REST -->|"SQL read/write (bidirectional)"| DS
-        DS -->|query results| REST
-        REST -->|"Docker API: pull image, create/start container"| Docker
-        Docker -->|"container output, exit code"| REST
+    subgraph Server["Server - To be containerized"]
+        API["🔵 REST API\nSpring Boot\n\nYAML validation,\npipeline orchestration,\nDAG dependency management"]
+        DB[("🟣 PostgreSQL\nDatabase")]
+        RMQ_Req["🟠 RabbitMQ\nJob-Request"]
+        RMQ_Res["🟠 RabbitMQ\nJob-Result"]
+        Worker["⚪ Worker"]
+        JobExec{{"<<interface>>\nJobExecutor"}}
+        MinIO(["🔴 MinIO\nArtifact Upload\nData Store\nS3 API"])
     end
 
-    CLI -->|"HTTP POST: run pipeline"| REST
-    CLI -->|"HTTP GET: report queries"| REST
-    REST -->|"JSON response: status, results, reports"| CLI
+    subgraph DockerContainers["Docker Job Containers"]
+        Docker1["🔵 DockerJobExecutor\nJob Container"]
+        Docker2["🔵 DockerJobExecutor\nJob Container"]
+        Docker3["🔵 DockerJobExecutor\nJob Container"]
+    end
 
-    Docker -->|runs| J1[Job Container 1]
-    Docker -->|runs| J2[Job Container 2]
-    Docker -->|runs| J3[Job Container N]
+    subgraph Future["Future"]
+        K8s["KubernetesJobExecutor\nK8s Job Resource"]
+    end
+
+    CLI -- "HTTP: run/report" --> API
+    API -- "HTTP: response" --> CLI
+
+    API -- "Create/Update\nJob Execution" --> DB
+    API -- "enqueue\nready jobs" --> RMQ_Req
+    RMQ_Res -- "consumed by\nJobQueueListener" --> API
+
+    RMQ_Req -- "send job" --> Worker
+    Worker -- "publish result" --> RMQ_Res
+    Worker --> JobExec
+
+    JobExec --> Docker1
+    JobExec --> Docker2
+    JobExec --> Docker3
+    JobExec -.-> K8s
+
+    Worker --> MinIO
 ```
 
 ### Component Communication Summary
 
 | From | To | Protocol | Direction | Purpose |
 |------|----|----------|-----------|---------|
-| CLI | REST Service | HTTP/REST | Unidirectional (request) | Submit run requests, query reports |
+| CLI | REST Service | HTTP/REST | Unidirectional (request) | Submit run requests (metadata only: repo URL, branch, commit, pipeline name), query reports |
 | REST Service | CLI | HTTP/REST | Unidirectional (response) | Return execution results, report data |
+| REST Service | Git Repository | Git (JGit / CLI) | Unidirectional | Clone repo at specified branch/commit to obtain pipeline config and source code |
 | REST Service | DataStore | SQL (JDBC) | Bidirectional | Read/write pipeline run records, stage/job status |
-| REST Service | Docker Engine | Docker API (HTTP) | Bidirectional | Pull images, create/start/stop containers, read output |
+| REST Service | Docker Engine | Docker API (HTTP) | Bidirectional | Pull images, create/start/stop containers (with cloned repo mounted as volume), read output |
 
 **Note:** The CLI also performs local-only operations (verify, dryrun) that do not involve the REST Service. These operations parse and validate YAML files entirely within the CLI process.
 
@@ -50,9 +70,9 @@ graph TB
 The CLI (`cicd`) is the primary user-facing interface built with picocli.
 
 **Responsibilities:**
-- Parse and validate pipeline configuration files (YAML v1.2)
+- Parse and validate pipeline configuration files locally for `verify` and `dryrun` (YAML v1.2)
 - Compute and display execution order (dryrun)
-- Send pipeline execution requests to the REST Service
+- For `run`: validate that `--branch`/`--commit` match the current checkout, then send metadata (repo URL, branch, commit, pipeline name) to the REST Service. The CLI does **not** send pipeline config or source code.
 - Display pipeline status and reports to users
 
 **Subcommands:**
@@ -70,16 +90,19 @@ The REST Service is the backend that orchestrates pipeline execution and manages
 
 **Responsibilities:**
 - Receive and process requests from CLI
+- Clone the git repository at the specified branch and commit into a temporary directory
+- Read and validate the pipeline configuration from `.pipelines/` in the cloned repo
 - Manage pipeline execution lifecycle (stages run sequentially, jobs within a stage respect `needs` ordering)
-- Coordinate Docker container operations (pull images, run containers, collect output)
+- Coordinate Docker container operations (pull images, run containers with cloned repo mounted as a volume, collect output)
 - Store and retrieve execution data from DataStore
 - Track git metadata (branch, commit hash, repo) for each run
+- Clean up the cloned temporary directory after the pipeline run completes
 
 **Key Endpoints:**
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/pipelines/run` | Start a pipeline execution |
+| `POST` | `/pipelines/run` | Start a pipeline execution. Payload: `{repoUrl, branch, commit, pipelineName}` |
 | `GET` | `/pipelines/{name}/runs` | Get all runs for a pipeline |
 | `GET` | `/pipelines/{name}/runs/{runNo}` | Get a specific run |
 | `GET` | `/pipelines/{name}/runs/{runNo}/stages/{stage}` | Get a specific stage in a run |
