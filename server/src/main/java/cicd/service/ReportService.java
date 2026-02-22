@@ -53,6 +53,9 @@ public class ReportService {
         response.setPipelineName(run.getPipelineName());
         response.setRunNo(run.getRunNo());
         response.setStatus(run.getStatus().toString());
+        response.setGitRepo(run.getGitRepo());
+        response.setGitBranch(run.getGitBranch());
+        response.setGitHash(run.getGitHash());
         response.setStartTime(run.getStartTime());
         response.setEndTime(run.getEndTime());
 
@@ -79,6 +82,9 @@ public class ReportService {
         response.setPipelineName(run.getPipelineName());
         response.setRunNo(run.getRunNo());
         response.setStatus(run.getStatus().toString());
+        response.setGitRepo(run.getGitRepo());
+        response.setGitBranch(run.getGitBranch());
+        response.setGitHash(run.getGitHash());
         response.setStartTime(run.getStartTime());
         response.setEndTime(run.getEndTime());
 
@@ -110,6 +116,9 @@ public class ReportService {
         response.setPipelineName(run.getPipelineName());
         response.setRunNo(run.getRunNo());
         response.setStatus(run.getStatus().toString());
+        response.setGitRepo(run.getGitRepo());
+        response.setGitBranch(run.getGitBranch());
+        response.setGitHash(run.getGitHash());
         response.setStartTime(run.getStartTime());
         response.setEndTime(run.getEndTime());
 
