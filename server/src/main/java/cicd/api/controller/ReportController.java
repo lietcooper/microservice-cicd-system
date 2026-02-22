@@ -2,6 +2,8 @@ package cicd.api.controller;
 
 import cicd.api.dto.PipelineRunDetailResponse;
 import cicd.api.dto.PipelineRunsResponse;
+import cicd.service.ReportService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -12,6 +14,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/pipelines")
 public class ReportController {
 
+  @Autowired
+  private ReportService reportService;
+
   /**
    * Level 1: all runs for a pipeline.
    *
@@ -21,8 +26,7 @@ public class ReportController {
   @GetMapping("/{name}/runs")
   public PipelineRunsResponse getAllRuns(
       @PathVariable String name) {
-    // TODO: implement
-    throw new UnsupportedOperationException("not implemented");
+    return reportService.getAllRuns(name);
   }
 
   /**
@@ -36,8 +40,7 @@ public class ReportController {
   public PipelineRunDetailResponse getRun(
       @PathVariable String name,
       @PathVariable int runNo) {
-    // TODO: implement
-    throw new UnsupportedOperationException("not implemented");
+    return reportService.getRun(name, runNo);
   }
 
   /**
@@ -53,8 +56,7 @@ public class ReportController {
       @PathVariable String name,
       @PathVariable int runNo,
       @PathVariable String stageName) {
-    // TODO: implement
-    throw new UnsupportedOperationException("not implemented");
+    return reportService.getStage(name, runNo, stageName);
   }
 
   /**
@@ -72,7 +74,6 @@ public class ReportController {
       @PathVariable int runNo,
       @PathVariable String stageName,
       @PathVariable String jobName) {
-    // TODO: implement
-    throw new UnsupportedOperationException("not implemented");
+    return reportService.getJob(name, runNo, stageName, jobName);
   }
 }
