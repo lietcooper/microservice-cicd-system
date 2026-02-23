@@ -17,3 +17,13 @@ build/
 !dev-docs
 !dev-docs/**/*.md
 .claude/
+CLAUDE.md
+DATABASE_PERSISTENCE_GUIDE.md
+REPORT_DATA_ASSEMBLY_GUIDE.md
+REPORT_ENDPOINTS_IMPLEMENTATION.md
+test-report-api.sh
+verify-json-assembly.sh
+run-server.sh
+*.log
+pipeline.log
+server.log
