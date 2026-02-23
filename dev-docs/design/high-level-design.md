@@ -5,51 +5,7 @@
 This document expands on the initial design with a detailed high-level architecture for our custom CI/CD system. The system allows developers to define, validate, and execute CI/CD pipelines locally (Phase 1) or remotely (Phase 2). All pipeline configuration is stored as YAML files in the repository under `.pipelines/`.
 
 ## High-Level Design Diagram
-```mermaid
-graph LR
-    subgraph DeveloperMachine["Developer Machine"]
-        CLI["🟡 CLI"]
-        Common["🟢 Common\nLib/utility"]
-    end
-
-    subgraph Server["Server - To be containerized"]
-        API["🔵 REST API\nSpring Boot\n\nYAML validation,\npipeline orchestration,\nDAG dependency management"]
-        DB[("🟣 PostgreSQL\nDatabase")]
-        RMQ_Req["🟠 RabbitMQ\nJob-Request"]
-        RMQ_Res["🟠 RabbitMQ\nJob-Result"]
-        Worker["⚪ Worker"]
-        JobExec{{"<<interface>>\nJobExecutor"}}
-        MinIO(["🔴 MinIO\nArtifact Upload\nData Store\nS3 API"])
-    end
-
-    subgraph DockerContainers["Docker Job Containers"]
-        Docker1["🔵 DockerJobExecutor\nJob Container"]
-        Docker2["🔵 DockerJobExecutor\nJob Container"]
-        Docker3["🔵 DockerJobExecutor\nJob Container"]
-    end
-
-    subgraph Future["Future"]
-        K8s["KubernetesJobExecutor\nK8s Job Resource"]
-    end
-
-    CLI -- "HTTP: run/report" --> API
-    API -- "HTTP: response" --> CLI
-
-    API -- "Create/Update\nJob Execution" --> DB
-    API -- "enqueue\nready jobs" --> RMQ_Req
-    RMQ_Res -- "consumed by\nJobQueueListener" --> API
-
-    RMQ_Req -- "send job" --> Worker
-    Worker -- "publish result" --> RMQ_Res
-    Worker --> JobExec
-
-    JobExec --> Docker1
-    JobExec --> Docker2
-    JobExec --> Docker3
-    JobExec -.-> K8s
-
-    Worker --> MinIO
-```
+![Design Architecture](./images/my-diagram.drawio.svg)
 
 ### Component Communication Summary
 
