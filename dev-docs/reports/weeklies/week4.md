@@ -6,6 +6,7 @@
 | Task | Weight | Assignee | 
 |[#50 Restructure Project for Phase 2] (https://github.com/CS7580-SEA-SP26/d-team/issues/50) | Large |  @Lijun Wan | 
 |[#49 Design DB schema and implement data access layer] (https://github.com/CS7580-SEA-SP26/d-team/issues/49) |     Medium   |     @Lijun Wan       |
+|[#44 [Design] Revise Architecture to message queue-driven design (https://github.com/CS7580-SEA-SP26/d-team/issues/44)]| Large | @Lijun Wan|
 | [#53 [REST] Implement pipeline execution with DB persistence ](https://github.com/CS7580-SEA-SP26/d-team/issues/53) | Large| @Yange Wang |
 | [#54 [REST] Implement report GET endpoints](https://github.com/CS7580-SEA-SP26/d-team/issues/54) | Medium | @yange |
 | [#55 [REST] Define DAO interfaces and data model classes ](https://github.com/CS7580-SEA-SP26/d-team/issues/55) | Medium | @yange wang |
@@ -16,9 +17,7 @@
 # Carry over tasks
 
 | Task | Weight | Assignee |
-| [#44 [Design] Revise Architecture to message queue-driven design| Large(https://github.com/CS7580-SEA-SP26/d-team/issues/44) | @Molly Yang |
 |[#45 [Chore] Fix code quality warnings (Checkstyle, SpotBugs, Javadoc)] (https://github.com/CS7580-SEA-SP26/d-team/issues/45) |    Medium    |    @Yange Wang      |
-
 # What worked this week?
 
 > Splitting work by layer (DB → REST → CLI) let Yange and Lijun work in parallel. Lijun merged the DB schema early so Yange could integrate without waiting. 
@@ -34,4 +33,5 @@ Defining DAO interfaces upfront kept everyone unblocked.
 > Added database persistence for pipeline execution (pipeline_runs, stage_runs, job_runs tables)
 > Added 4 REST GET endpoints for report subcommand
 > Fixed JSON field names to match project spec (run-no, git-hash, git-branch, git-repo)
+> replaced old high-level design mermaid diagram with the Message queue-driven design
 
