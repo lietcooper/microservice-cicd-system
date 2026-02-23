@@ -44,7 +44,7 @@ public class PipelineExecutionController {
             // Parse pipeline from name or YAML content
             if (request.getPipelineName() != null && !request.getPipelineName().isEmpty()) {
                 // Find pipeline by name
-                PipelineFinder.FindResult found = PipelineFinder.findByName(request.getPipelineName());
+                PipelineFinder.FindResult found = PipelineFinder.findByName(request.getPipelineName(), repoPath);
                 if (found.hasError()) {
                     return ResponseEntity.badRequest()
                             .body("Error finding pipeline: " + found.error);
