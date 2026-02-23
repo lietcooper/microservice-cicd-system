@@ -12,8 +12,8 @@ import com.github.dockerjava.api.model.HostConfig;
 import com.github.dockerjava.api.model.Volume;
 import com.github.dockerjava.core.DefaultDockerClientConfig;
 import com.github.dockerjava.core.DockerClientImpl;
-import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
 import com.github.dockerjava.transport.DockerHttpClient;
+import com.github.dockerjava.zerodep.ZerodepDockerHttpClient;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -34,11 +34,11 @@ public class LocalDockerRunner implements DockerRunner {
   public LocalDockerRunner() {
     DefaultDockerClientConfig config =
         DefaultDockerClientConfig.createDefaultConfigBuilder().build();
-    DockerHttpClient httpClient = new ApacheDockerHttpClient.Builder()
+    DockerHttpClient httpClient = new ZerodepDockerHttpClient.Builder()
         .dockerHost(config.getDockerHost())
         .build();
     this.dockerClient = DockerClientImpl.getInstance(config, httpClient);
-  }
+}
 
   /** Creates a runner with a provided DockerClient (for testing). */
   LocalDockerRunner(DockerClient dockerClient) {
