@@ -1,37 +1,55 @@
+
 # Week 4
 
+##  Completed 
 
-# Completed tasks
+| Task                                                                                                                                    | Weight | Assignee    |
+| --------------------------------------------------------------------------------------------------------------------------------------- | ------ | ----------- |
+| [#50 Restructure Project for Phase 2](https://github.com/CS7580-SEA-SP26/d-team/issues/50)                                              | Large  | @Lijun Wan  |
+| [#49 Design DB Schema and Implement Data Access Layer](https://github.com/CS7580-SEA-SP26/d-team/issues/49)                             | Medium | @Lijun Wan  |
+| [#44 Revise Architecture to Message Queue–Driven Design](https://github.com/CS7580-SEA-SP26/d-team/issues/44)                           | Large  | @Lijun Wan  |
+| [#53 Implement Pipeline Execution with DB Persistence](https://github.com/CS7580-SEA-SP26/d-team/issues/53)                             | Large  | @Yange Wang |
+| [#54 Implement Report GET Endpoints](https://github.com/CS7580-SEA-SP26/d-team/issues/54)                                               | Medium | @Yange Wang |
+| [#55 Define DAO Interfaces and Data Model Classes](https://github.com/CS7580-SEA-SP26/d-team/issues/55)                                 | Medium | @Yange Wang |
+| [#60 Format Report Output in YAML-like Style Matching Spec](https://github.com/CS7580-SEA-SP26/d-team/issues/60)                        | Small  | @Molly Yang |
+| [#59 Call REST API Endpoints and Parse JSON Response](https://github.com/CS7580-SEA-SP26/d-team/issues/59)                              | Small  | @Molly Yang |
+| [#58 Validate Option Combinations in Report Subcommand](https://github.com/CS7580-SEA-SP26/d-team/issues/58)                            | Small  | @Molly Yang |
+| [#57 Add Report Subcommand with `--pipeline`, `--run`, `--stage`, `--job` Options](https://github.com/CS7580-SEA-SP26/d-team/issues/57) | Medium | @Molly Yang |
 
-| Task | Weight | Assignee | 
-|[#50 Restructure Project for Phase 2] (https://github.com/CS7580-SEA-SP26/d-team/issues/50) | Large |  @Lijun Wan | 
-|[#49 Design DB schema and implement data access layer] (https://github.com/CS7580-SEA-SP26/d-team/issues/49) |     Medium   |     @Lijun Wan       |
-|[#44 [Design] Revise Architecture to message queue-driven design (https://github.com/CS7580-SEA-SP26/d-team/issues/44)]| Large | @Lijun Wan|
-| [#53 [REST] Implement pipeline execution with DB persistence ](https://github.com/CS7580-SEA-SP26/d-team/issues/53) | Large| @Yange Wang |
-| [#54 [REST] Implement report GET endpoints](https://github.com/CS7580-SEA-SP26/d-team/issues/54) | Medium | @yange |
-| [#55 [REST] Define DAO interfaces and data model classes ](https://github.com/CS7580-SEA-SP26/d-team/issues/55) | Medium | @yange wang |
-| [#60 Format report output in YAML-like Style matching Spec](https://github.com/CS7580-SEA-SP26/d-team/issues/60) | Small | @Molly Yang |
-| [#59 Call REST API endpoints and prase JSON response](https://github.com/CS7580-SEA-SP26/d-team/issues/59) | Small | @Molly Yang |
-| [#58 Validate Option Combinations in report subcommand](https://github.com/CS7580-SEA-SP26/d-team/issues/58) | Small | @Molly Yang |
-| [#57 Add report subcommand with --pipeline, --run,--stage,--job Options](https://github.com/CS7580-SEA-SP26/d-team/issues/57) | Medium | @Molly Yang |
-# Carry over tasks
+##  Carry-Over 
 
-| Task | Weight | Assignee |
-|[#45 [Chore] Fix code quality warnings (Checkstyle, SpotBugs, Javadoc)] (https://github.com/CS7580-SEA-SP26/d-team/issues/45) |    Medium    |    @Yange Wang      |
-# What worked this week?
+| Task                                                                                                                 | Weight | Assignee    |
+| -------------------------------------------------------------------------------------------------------------------- | ------ | ----------- |
+| [#45 Fix Code Quality Warnings (Checkstyle, SpotBugs, Javadoc)](https://github.com/CS7580-SEA-SP26/d-team/issues/45) | Medium | @Yange Wang |
 
-> Splitting work by layer (DB → REST → CLI) let Yange and Lijun work in parallel. Lijun merged the DB schema early so Yange could integrate without waiting. 
-Defining DAO interfaces upfront kept everyone unblocked.
 
-# What did not work this week?
+## What Worked
 
-> JSON response format wasn't agreed on early enough. We had to fix field names late to match the spec. 
-> We Should have defined the API contract on Day 1 so everyone can start their own work earlier.  
+* Splitting work by layer (**DB → REST → CLI**) allowed parallel development.
+* The DB schema was merged early, enabling smooth integration.
+* Defining DAO interfaces upfront reduced blocking and improved coordination.
 
-# Design updates
 
-> Added database persistence for pipeline execution (pipeline_runs, stage_runs, job_runs tables)
-> Added 4 REST GET endpoints for report subcommand
-> Fixed JSON field names to match project spec (run-no, git-hash, git-branch, git-repo)
-> replaced old high-level design mermaid diagram with the Message queue-driven design
+##  What Didn’t Work Well
+
+* The JSON response format was not agreed upon early.
+* Field names had to be adjusted late to match the project specification.
+* The API contract should have been defined on Day 1 to avoid rework.
+
+
+##  Design Updates
+
+* Added database persistence for pipeline execution:
+
+    * `pipeline_runs`
+    * `stage_runs`
+    * `job_runs`
+* Added 4 REST GET endpoints to support the report subcommand.
+* Updated JSON field names to match project spec:
+
+    * `run-no`
+    * `git-hash`
+    * `git-branch`
+    * `git-repo`
+* Replaced the old high-level design Mermaid diagram with the new **message queue–driven design**.
 
