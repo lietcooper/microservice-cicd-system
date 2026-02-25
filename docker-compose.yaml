@@ -11,5 +11,23 @@ services:
     volumes:
       - cicd-pgdata:/var/lib/postgresql/data
 
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: cicd-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: cicd
+      RABBITMQ_DEFAULT_PASS: cicd
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - cicd-rmqdata:/var/lib/rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   cicd-pgdata:
+  cicd-rmqdata:

@@ -48,6 +48,81 @@ public class ExecutionPlanner {
   }
 
   /**
+   * Returns the execution plan with wave-level grouping for parallel execution.
+   * Each stage contains a list of waves; jobs within a wave can run in parallel.
+   */
+  public List<WaveStageExecution> computeWaveOrder() {
+    List<WaveStageExecution> plan = new ArrayList<>();
+
+    for (String stage : pipeline.stages) {
+      LinkedHashMap<String, Job> stageJobs = new LinkedHashMap<>();
+      for (Map.Entry<String, Job> entry : pipeline.jobs.entrySet()) {
+        if (stage.equals(entry.getValue().stage)) {
+          stageJobs.put(entry.getKey(), entry.getValue());
+        }
+      }
+
+      List<List<Job>> waves = computeWaves(stageJobs);
+      plan.add(new WaveStageExecution(stage, waves));
+    }
+
+    return plan;
+  }
+
+  /**
+   * Groups jobs into waves using a modified Kahn's algorithm.
+   * Each iteration collects ALL zero in-degree jobs into one wave,
+   * then decrements dependents for the next iteration.
+   */
+  private List<List<Job>> computeWaves(LinkedHashMap<String, Job> stageJobs) {
+    Map<String, Integer> inDegree = new HashMap<>();
+    for (String name : stageJobs.keySet()) {
+      inDegree.put(name, 0);
+    }
+
+    for (Job job : stageJobs.values()) {
+      for (String need : job.needs) {
+        if (stageJobs.containsKey(need)) {
+          inDegree.merge(job.name, 1, Integer::sum);
+        }
+      }
+    }
+
+    List<List<Job>> waves = new ArrayList<>();
+    Map<String, Integer> remaining = new HashMap<>(inDegree);
+
+    while (!remaining.isEmpty()) {
+      // Collect all jobs with zero in-degree as the current wave
+      List<Job> wave = new ArrayList<>();
+      List<String> waveNames = new ArrayList<>();
+      for (String name : stageJobs.keySet()) {
+        if (remaining.containsKey(name) && remaining.get(name) == 0) {
+          wave.add(stageJobs.get(name));
+          waveNames.add(name);
+        }
+      }
+
+      if (wave.isEmpty()) {
+        break; // cycle detected (should not happen with validated pipelines)
+      }
+
+      // Remove processed jobs and decrement dependents
+      for (String name : waveNames) {
+        remaining.remove(name);
+        for (Job job : stageJobs.values()) {
+          if (job.needs.contains(name) && remaining.containsKey(job.name)) {
+            remaining.merge(job.name, -1, Integer::sum);
+          }
+        }
+      }
+
+      waves.add(wave);
+    }
+
+    return waves;
+  }
+
+  /**
    * Kahn's algorithm for topological sort within a stage.
    * Jobs with no unresolved needs are emitted in their original definition order.
    */
@@ -113,6 +188,29 @@ public class ExecutionPlanner {
 
     public List<Job> getJobs() {
       return jobs;
+    }
+  }
+
+  /**
+   * Represents a stage with its jobs grouped into waves for parallel execution.
+   * Jobs within the same wave have no dependencies on each other.
+   */
+  public static class WaveStageExecution {
+
+    private final String stageName;
+    private final List<List<Job>> waves;
+
+    public WaveStageExecution(String stageName, List<List<Job>> waves) {
+      this.stageName = stageName;
+      this.waves = waves;
+    }
+
+    public String getStageName() {
+      return stageName;
+    }
+
+    public List<List<Job>> getWaves() {
+      return waves;
     }
   }
 }

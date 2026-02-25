@@ -33,6 +33,8 @@ public class ExecutePipelineResponse {
             response.setMessage("Pipeline executed successfully");
         } else if (entity.getStatus() == RunStatus.FAILED) {
             response.setMessage("Pipeline execution failed");
+        } else if (entity.getStatus() == RunStatus.PENDING) {
+            response.setMessage("Pipeline execution queued");
         } else {
             response.setMessage("Pipeline is running");
         }

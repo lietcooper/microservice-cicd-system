@@ -36,7 +36,7 @@ public class RunCmd implements Callable<Integer> {
     private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
     private static final OkHttpClient client = new OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(600, TimeUnit.SECONDS) // 10 minutes for long-running pipelines
+            .readTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
             .build();
 
@@ -118,8 +118,22 @@ public class RunCmd implements Callable<Integer> {
             try (Response response = client.newCall(request).execute()) {
                 String responseBody = response.body().string();
 
-                if (response.isSuccessful()) {
-                    // Parse and display the response
+                if (response.code() == 202) {
+                    // Async: pipeline queued for execution
+                    ObjectNode responseJson = (ObjectNode) mapper.readTree(responseBody);
+                    String pipelineName = responseJson.get("pipelineName").asText();
+                    int runNo = responseJson.get("runNo").asInt();
+
+                    System.out.println("\nPipeline execution queued.");
+                    System.out.println("  Pipeline: " + pipelineName);
+                    System.out.println("  Run #: " + runNo);
+                    System.out.println("  Status: PENDING");
+                    System.out.println("\nCheck progress with:");
+                    System.out.println("  cicd report --pipeline "
+                        + pipelineName + " --run " + runNo);
+                    return 0;
+                } else if (response.isSuccessful()) {
+                    // Synchronous: pipeline completed (legacy support)
                     ObjectNode responseJson = (ObjectNode) mapper.readTree(responseBody);
 
                     System.out.println("\n=== Pipeline Execution Result ===");
@@ -133,7 +147,6 @@ public class RunCmd implements Callable<Integer> {
                         System.out.println("Message: " + responseJson.get("message").asText());
                     }
 
-                    // Return 0 for success, 1 for failed pipeline
                     String status = responseJson.get("status").asText();
                     return "SUCCESS".equals(status) ? 0 : 1;
                 } else {
