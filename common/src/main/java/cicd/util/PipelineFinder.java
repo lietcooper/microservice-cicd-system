@@ -1,15 +1,14 @@
 package cicd.util;
 
+import java.io.File;
+
 import cicd.model.Pipeline;
 import cicd.parser.YamlParser;
-import cicd.validator.Validator;
-import java.io.File;
-import java.util.List;
 
 public class PipelineFinder {
 
-  public static FindResult findByName(String name) {
-    File dir = new File(".pipelines");
+  public static FindResult findByName(String name, String basePath) {
+    File dir = new File(basePath, ".pipelines");
     if (!dir.isDirectory()) {
       return FindResult.err(".pipelines/ directory not found");
     }
