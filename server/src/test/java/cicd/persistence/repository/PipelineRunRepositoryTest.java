@@ -190,6 +190,31 @@ class PipelineRunRepositoryTest {
     assertEquals(RunStatus.FAILED, found.get().getStatus());
   }
 
+  @Test
+  void pendingStatusCanBePersisted() {
+    PipelineRunEntity pr = savePipelineRun("pending-test", 1, RunStatus.PENDING);
+
+    Optional<PipelineRunEntity> found =
+        pipelineRunRepo.findByPipelineNameAndRunNo("pending-test", 1);
+
+    assertTrue(found.isPresent());
+    assertEquals(RunStatus.PENDING, found.get().getStatus());
+  }
+
+  @Test
+  void pendingStatusTransitionsToRunning() {
+    PipelineRunEntity pr = savePipelineRun("transition-test", 1, RunStatus.PENDING);
+
+    pr.setStatus(RunStatus.RUNNING);
+    pr.setStartTime(OffsetDateTime.now());
+    pipelineRunRepo.save(pr);
+
+    Optional<PipelineRunEntity> found =
+        pipelineRunRepo.findByPipelineNameAndRunNo("transition-test", 1);
+    assertTrue(found.isPresent());
+    assertEquals(RunStatus.RUNNING, found.get().getStatus());
+  }
+
   private PipelineRunEntity savePipelineRun(
       String name, int runNo, RunStatus status) {
     PipelineRunEntity pr = new PipelineRunEntity();
