@@ -474,7 +474,7 @@ class DtoEqualsHashCodeBranchTest {
     req.setPipelineYaml("pipeline:\n  name: release\n");
     req.setBranch("main");
     req.setCommit("deadbeef");
-    req.setRepoPath("/workspace");
+    req.setRepoUrl("https://github.com/user/repo");
 
     int hash = req.hashCode();
     assertEquals(hash, req.hashCode());
@@ -737,14 +737,14 @@ class DtoEqualsHashCodeBranchTest {
     req1.setPipelineYaml("yaml");
     req1.setBranch("main");
     req1.setCommit("abc");
-    req1.setRepoPath("/workspace-a");
+    req1.setRepoUrl("https://github.com/user/repo-a");
 
     ExecutePipelineRequest req2 = new ExecutePipelineRequest();
     req2.setPipelineName("pipe");
     req2.setPipelineYaml("yaml");
     req2.setBranch("main");
     req2.setCommit("abc");
-    req2.setRepoPath("/workspace-b");
+    req2.setRepoUrl("https://github.com/user/repo-b");
 
     assertNotEquals(req1, req2);
   }

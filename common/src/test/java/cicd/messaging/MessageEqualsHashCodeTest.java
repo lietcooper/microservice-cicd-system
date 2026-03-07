@@ -25,9 +25,9 @@ class MessageEqualsHashCodeTest {
   @Test
   void pipelineExecuteMessage_equalObjectsAreEqual() {
     PipelineExecuteMessage msg1 = new PipelineExecuteMessage(
-        1L, "default", 1, "yaml", "/repo", "main", "abc");
+        1L, "default", 1, "yaml", new byte[] {1}, "main", "abc");
     PipelineExecuteMessage msg2 = new PipelineExecuteMessage(
-        1L, "default", 1, "yaml", "/repo", "main", "abc");
+        1L, "default", 1, "yaml", new byte[] {1}, "main", "abc");
 
     assertEquals(msg1, msg2);
   }
@@ -35,9 +35,9 @@ class MessageEqualsHashCodeTest {
   @Test
   void pipelineExecuteMessage_equalObjectsHaveSameHashCode() {
     PipelineExecuteMessage msg1 = new PipelineExecuteMessage(
-        1L, "default", 1, "yaml", "/repo", "main", "abc");
+        1L, "default", 1, "yaml", new byte[] {1}, "main", "abc");
     PipelineExecuteMessage msg2 = new PipelineExecuteMessage(
-        1L, "default", 1, "yaml", "/repo", "main", "abc");
+        1L, "default", 1, "yaml", new byte[] {1}, "main", "abc");
 
     assertEquals(msg1.hashCode(), msg2.hashCode());
   }
@@ -45,9 +45,9 @@ class MessageEqualsHashCodeTest {
   @Test
   void pipelineExecuteMessage_differentIdIsNotEqual() {
     PipelineExecuteMessage msg1 = new PipelineExecuteMessage(
-        1L, "default", 1, "yaml", "/repo", "main", "abc");
+        1L, "default", 1, "yaml", new byte[] {1}, "main", "abc");
     PipelineExecuteMessage msg2 = new PipelineExecuteMessage(
-        2L, "default", 1, "yaml", "/repo", "main", "abc");
+        2L, "default", 1, "yaml", new byte[] {2}, "main", "abc");
 
     assertNotEquals(msg1, msg2);
   }
@@ -55,9 +55,9 @@ class MessageEqualsHashCodeTest {
   @Test
   void pipelineExecuteMessage_differentPipelineNameIsNotEqual() {
     PipelineExecuteMessage msg1 = new PipelineExecuteMessage(
-        1L, "pipe-a", 1, "yaml", "/repo", "main", "abc");
+        1L, "pipe-a", 1, "yaml", new byte[] {1}, "main", "abc");
     PipelineExecuteMessage msg2 = new PipelineExecuteMessage(
-        1L, "pipe-b", 1, "yaml", "/repo", "main", "abc");
+        1L, "pipe-b", 1, "yaml", new byte[] {1}, "main", "abc");
 
     assertNotEquals(msg1, msg2);
     assertNotEquals(msg1.hashCode(), msg2.hashCode());
@@ -66,7 +66,7 @@ class MessageEqualsHashCodeTest {
   @Test
   void pipelineExecuteMessage_notEqualToNull() {
     PipelineExecuteMessage msg = new PipelineExecuteMessage(
-        1L, "default", 1, "yaml", "/repo", "main", "abc");
+        1L, "default", 1, "yaml", new byte[] {1}, "main", "abc");
 
     assertNotEquals(null, msg);
   }
@@ -74,7 +74,7 @@ class MessageEqualsHashCodeTest {
   @Test
   void pipelineExecuteMessage_notEqualToDifferentType() {
     PipelineExecuteMessage msg = new PipelineExecuteMessage(
-        1L, "default", 1, "yaml", "/repo", "main", "abc");
+        1L, "default", 1, "yaml", new byte[] {1}, "main", "abc");
 
     assertNotEquals("a string", msg);
   }
@@ -82,7 +82,7 @@ class MessageEqualsHashCodeTest {
   @Test
   void pipelineExecuteMessage_toStringContainsFieldValues() {
     PipelineExecuteMessage msg = new PipelineExecuteMessage(
-        42L, "my-pipe", 3, "yaml-content", "/workspace", "feature", "deadbeef");
+        42L, "my-pipe", 3, "yaml-content", new byte[] {4, 2}, "feature", "deadbeef");
 
     String str = msg.toString();
     assertNotNull(str);
@@ -93,7 +93,7 @@ class MessageEqualsHashCodeTest {
   @Test
   void pipelineExecuteMessage_equalToSelf() {
     PipelineExecuteMessage msg = new PipelineExecuteMessage(
-        1L, "default", 1, "yaml", "/repo", "main", "abc");
+        1L, "default", 1, "yaml", new byte[] {1}, "main", "abc");
 
     assertEquals(msg, msg);
   }
@@ -589,7 +589,7 @@ class MessageEqualsHashCodeTest {
   @Test
   void pipelineExecuteMessage_hashCodeWithAllNonNullFields() {
     PipelineExecuteMessage msg = new PipelineExecuteMessage(
-        5L, "pipe", 2, "yaml-content", "/workspace", "main", "abc123");
+        5L, "pipe", 2, "yaml-content", new byte[] {5}, "main", "abc123");
 
     int hash = msg.hashCode();
     assertEquals(hash, msg.hashCode());
@@ -649,9 +649,9 @@ class MessageEqualsHashCodeTest {
   @Test
   void pipelineExecuteMessage_subclassCanEqualReturnsFalse() {
     PipelineExecuteMessage base = new PipelineExecuteMessage(
-        1L, "pipe", 1, "yaml", "/repo", "main", "abc");
+        1L, "pipe", 1, "yaml", new byte[] {1}, "main", "abc");
     PipelineExecuteMessage sub = new PipelineExecuteMessage(
-        1L, "pipe", 1, "yaml", "/repo", "main", "abc") {
+        1L, "pipe", 1, "yaml", new byte[] {1}, "main", "abc") {
       @Override
       public boolean canEqual(Object other) {
         return false;
@@ -796,7 +796,7 @@ class MessageEqualsHashCodeTest {
     msg.setRunNo(1);
     msg.setImage(image);
     msg.setScripts(Arrays.asList("gradle build"));
-    msg.setRepoPath("/repo");
+    msg.setWorkspacePath("/repo");
     msg.setTotalJobsInWave(1);
     return msg;
   }

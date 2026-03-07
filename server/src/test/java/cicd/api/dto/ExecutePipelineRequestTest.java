@@ -19,7 +19,7 @@ class ExecutePipelineRequestTest {
     assertNull(req.getPipelineYaml());
     assertNull(req.getBranch());
     assertNull(req.getCommit());
-    assertNull(req.getRepoPath());
+    assertNull(req.getRepoUrl());
   }
 
   @Test
@@ -52,10 +52,10 @@ class ExecutePipelineRequestTest {
   }
 
   @Test
-  void setRepoPathStoresValue() {
+  void setRepoUrlStoresValue() {
     ExecutePipelineRequest req = new ExecutePipelineRequest();
-    req.setRepoPath("/home/user/project");
-    assertEquals("/home/user/project", req.getRepoPath());
+    req.setRepoUrl("https://github.com/user/repo");
+    assertEquals("https://github.com/user/repo", req.getRepoUrl());
   }
 
   @Test
@@ -65,13 +65,13 @@ class ExecutePipelineRequestTest {
     req.setPipelineYaml("yaml-content");
     req.setBranch("main");
     req.setCommit("deadbeef");
-    req.setRepoPath("/workspace");
+    req.setRepoUrl("https://github.com/user/repo");
 
     assertEquals("default", req.getPipelineName());
     assertEquals("yaml-content", req.getPipelineYaml());
     assertEquals("main", req.getBranch());
     assertEquals("deadbeef", req.getCommit());
-    assertEquals("/workspace", req.getRepoPath());
+    assertEquals("https://github.com/user/repo", req.getRepoUrl());
   }
 
   @Test
@@ -105,13 +105,13 @@ class ExecutePipelineRequestTest {
     req1.setPipelineName("default");
     req1.setBranch("main");
     req1.setCommit("abc123");
-    req1.setRepoPath("/workspace");
+    req1.setRepoUrl("https://github.com/user/repo");
 
     ExecutePipelineRequest req2 = new ExecutePipelineRequest();
     req2.setPipelineName("default");
     req2.setBranch("main");
     req2.setCommit("abc123");
-    req2.setRepoPath("/workspace");
+    req2.setRepoUrl("https://github.com/user/repo");
 
     assertEquals(req1.hashCode(), req2.hashCode());
   }
@@ -142,12 +142,13 @@ class ExecutePipelineRequestTest {
     req.setPipelineName("release");
     req.setBranch("main");
     req.setCommit("deadbeef");
-    req.setRepoPath("/workspace");
+    req.setRepoUrl("https://github.com/user/repo");
 
     String str = req.toString();
     assertNotNull(str);
     assertTrue(str.contains("release"));
     assertTrue(str.contains("deadbeef"));
+    assertTrue(str.contains("https://github.com/user/repo"));
   }
 
   @Test

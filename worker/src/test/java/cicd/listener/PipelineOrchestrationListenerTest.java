@@ -18,6 +18,8 @@ import cicd.messaging.PipelineExecuteMessage;
 import cicd.service.StageCoordinatorService;
 import cicd.service.StatusEventPublisher;
 import cicd.service.StatusUpdatePublisher;
+import cicd.service.WorkspaceArchiveService;
+import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -37,6 +39,7 @@ class PipelineOrchestrationListenerTest {
   private StageCoordinatorService coordinator;
   private StatusEventPublisher eventPublisher;
   private StatusUpdatePublisher statusPublisher;
+  private WorkspaceArchiveService workspaceArchiveService;
   private PipelineOrchestrationListener listener;
 
   @BeforeEach
@@ -45,8 +48,11 @@ class PipelineOrchestrationListenerTest {
     coordinator = mock(StageCoordinatorService.class);
     eventPublisher = mock(StatusEventPublisher.class);
     statusPublisher = mock(StatusUpdatePublisher.class);
+    workspaceArchiveService = mock(WorkspaceArchiveService.class);
+    when(workspaceArchiveService.extractArchive(any())).thenReturn(Path.of("/tmp/workspace"));
     listener = new PipelineOrchestrationListener(
-        rabbitTemplate, coordinator, eventPublisher, statusPublisher);
+        rabbitTemplate, coordinator, eventPublisher, statusPublisher,
+        workspaceArchiveService);
   }
 
   // ── YAML parse failure path ─────────────────────────────────────────────────
@@ -291,7 +297,7 @@ class PipelineOrchestrationListenerTest {
 
   private PipelineExecuteMessage buildMsg(String yaml) {
     return new PipelineExecuteMessage(
-        1L, "default", 1, yaml, "/tmp/repo", "main", "abc123");
+        1L, "default", 1, yaml, new byte[] {1, 2}, "main", "abc123");
   }
 
   /** Minimal valid YAML with one job in a 'build' stage. */

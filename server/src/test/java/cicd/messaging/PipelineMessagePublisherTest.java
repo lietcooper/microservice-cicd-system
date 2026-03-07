@@ -61,7 +61,7 @@ class PipelineMessagePublisherTest {
     PipelineExecuteMessage msg = new PipelineExecuteMessage(
         42L, "my-pipeline", 7,
         "pipeline:\n  name: my-pipeline",
-        "/workspace", "feature-x", "deadbeef");
+        new byte[] {1, 2, 3}, "feature-x", "deadbeef");
 
     publisher.publishPipelineExecute(msg);
 
@@ -76,7 +76,7 @@ class PipelineMessagePublisherTest {
     assertEquals(42L, sent.getPipelineRunId());
     assertEquals("my-pipeline", sent.getPipelineName());
     assertEquals(7, sent.getRunNo());
-    assertEquals("/workspace", sent.getRepoPath());
+    assertEquals(3, sent.getWorkspaceArchive().length);
     assertEquals("feature-x", sent.getGitBranch());
     assertEquals("deadbeef", sent.getGitCommit());
   }
@@ -120,7 +120,7 @@ class PipelineMessagePublisherTest {
     msg.setPipelineRunId(1L);
     msg.setPipelineName("minimal");
     msg.setRunNo(1);
-    msg.setRepoPath("/repo");
+    msg.setWorkspaceArchive(new byte[] {9});
 
     publisher.publishPipelineExecute(msg);
 
@@ -136,6 +136,6 @@ class PipelineMessagePublisherTest {
     return new PipelineExecuteMessage(
         (long) runNo, pipelineName, runNo,
         "pipeline:\n  name: " + pipelineName,
-        "/workspace", "main", "abc123");
+        new byte[] {1}, "main", "abc123");
   }
 }

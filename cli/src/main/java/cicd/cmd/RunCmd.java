@@ -43,21 +43,9 @@ public class RunCmd implements Callable<Integer> {
             .writeTimeout(30, TimeUnit.SECONDS)
             .build();
 
-    @Override
-    public Integer call() {
+  @Override
+  public Integer call() {
         String currentPath = System.getProperty("user.dir");
-
-        // Auto-detect repoUrl if not provided
-        if (repoUrl == null) {
-            if (GitHelper.isGitRoot(currentPath)) {
-                // For now, if we are in a git root, we can still use current path as local URL
-                // but in a real remote scenario, we might want to get remote origin URL
-                repoUrl = currentPath; 
-            } else {
-                System.err.println("error: --repo-url must be specified if not in a git repository root directory");
-                return 1;
-            }
-        }
 
         // Validate options
         if (name == null && file == null) {
@@ -67,6 +55,14 @@ public class RunCmd implements Callable<Integer> {
         if (name != null && file != null) {
             System.err.println("error: --name and --file are mutually exclusive");
             return 1;
+        }
+
+        if (repoUrl == null) {
+            repoUrl = detectRepoUrl(currentPath);
+            if (repoUrl == null || repoUrl.isBlank()) {
+                System.err.println("error: --repo-url is required or the current git repository must have an origin remote");
+                return 1;
+            }
         }
 
         try {
@@ -147,6 +143,17 @@ public class RunCmd implements Callable<Integer> {
             System.err.println("Failed to communicate with server: " + e.getMessage());
             System.err.println("Make sure the server is running at " + serverUrl);
             return 1;
+        }
+    }
+
+    private String detectRepoUrl(String currentPath) {
+        if (!GitHelper.isGitRoot(currentPath)) {
+            return null;
+        }
+        try {
+            return GitHelper.remoteOriginUrl(currentPath);
+        } catch (RuntimeException e) {
+            return null;
         }
     }
 }

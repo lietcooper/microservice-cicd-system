@@ -10,6 +10,7 @@ import cicd.parser.YamlParser;
 import cicd.service.StageCoordinatorService;
 import cicd.service.StatusEventPublisher;
 import cicd.service.StatusUpdatePublisher;
+import cicd.service.WorkspaceArchiveService;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -31,21 +32,25 @@ public class PipelineOrchestrationListener {
   private final StageCoordinatorService coordinator;
   private final StatusEventPublisher eventPublisher;
   private final StatusUpdatePublisher statusPublisher;
+  private final WorkspaceArchiveService workspaceArchiveService;
 
   public PipelineOrchestrationListener(
       RabbitTemplate rabbitTemplate,
       StageCoordinatorService coordinator,
       StatusEventPublisher eventPublisher,
-      StatusUpdatePublisher statusPublisher) {
+      StatusUpdatePublisher statusPublisher,
+      WorkspaceArchiveService workspaceArchiveService) {
     this.rabbitTemplate = rabbitTemplate;
     this.coordinator = coordinator;
     this.eventPublisher = eventPublisher;
     this.statusPublisher = statusPublisher;
+    this.workspaceArchiveService = workspaceArchiveService;
   }
 
   @RabbitListener(queues = RabbitMqConfig.PIPELINE_EXECUTE_QUEUE,
       concurrency = "1")
   public void onPipelineExecute(PipelineExecuteMessage msg) {
+    Path workspacePath = null;
     System.out.println("=== Orchestrator: running pipeline '"
         + msg.getPipelineName() + "' run #" + msg.getRunNo() + " ===");
 
@@ -56,110 +61,109 @@ public class PipelineOrchestrationListener {
     eventPublisher.publishPipelineStarted(
         msg.getPipelineRunId(), msg.getPipelineName(), msg.getRunNo());
 
-    // Parse pipeline from YAML
-    Pipeline pipeline = parsePipelineYaml(msg.getPipelineYaml());
-    if (pipeline == null) {
-      statusPublisher.pipelineFailed(
-          msg.getPipelineRunId(), msg.getPipelineName(), msg.getRunNo());
-      return;
-    }
+    try {
+      workspacePath = workspaceArchiveService.extractArchive(
+          msg.getWorkspaceArchive());
 
-    // Compute wave-based execution plan
-    ExecutionPlanner planner = new ExecutionPlanner(pipeline);
-    List<ExecutionPlanner.WaveStageExecution> plan = planner.computeWaveOrder();
+      // Parse pipeline from YAML
+      Pipeline pipeline = parsePipelineYaml(msg.getPipelineYaml());
+      if (pipeline == null) {
+        statusPublisher.pipelineFailed(
+            msg.getPipelineRunId(), msg.getPipelineName(), msg.getRunNo());
+        return;
+      }
 
-    boolean pipelineFailed = false;
-    int stageOrder = 0;
+      // Compute wave-based execution plan
+      ExecutionPlanner planner = new ExecutionPlanner(pipeline);
+      List<ExecutionPlanner.WaveStageExecution> plan = planner.computeWaveOrder();
 
-    for (ExecutionPlanner.WaveStageExecution stage : plan) {
-      System.out.println("\n--- Stage: " + stage.getStageName() + " ---");
+      boolean pipelineFailed = false;
+      int stageOrder = 0;
 
-      int currentStageOrder = stageOrder++;
+      for (ExecutionPlanner.WaveStageExecution stage : plan) {
+        System.out.println("\n--- Stage: " + stage.getStageName() + " ---");
 
-      // Create stage record via MQ
-      statusPublisher.stageStarted(msg.getPipelineRunId(),
-          msg.getPipelineName(), msg.getRunNo(),
-          stage.getStageName(), currentStageOrder);
+        int currentStageOrder = stageOrder++;
 
-      eventPublisher.publishStageStarted(msg.getPipelineRunId(),
-          msg.getPipelineName(), msg.getRunNo(), stage.getStageName());
+        statusPublisher.stageStarted(msg.getPipelineRunId(),
+            msg.getPipelineName(), msg.getRunNo(),
+            stage.getStageName(), currentStageOrder);
 
-      boolean stageFailed = false;
+        eventPublisher.publishStageStarted(msg.getPipelineRunId(),
+            msg.getPipelineName(), msg.getRunNo(), stage.getStageName());
 
-      // Process each wave in the stage
-      for (List<Job> wave : stage.getWaves()) {
-        String correlationId = UUID.randomUUID().toString();
-        coordinator.registerWave(correlationId, wave.size());
+        boolean stageFailed = false;
 
-        // Fan-out: publish job messages for all jobs in this wave
-        for (Job job : wave) {
-          // Create job record via MQ
-          statusPublisher.jobCreated(msg.getPipelineRunId(),
-              msg.getPipelineName(), msg.getRunNo(),
-              stage.getStageName(), job.name);
+        for (List<Job> wave : stage.getWaves()) {
+          String correlationId = UUID.randomUUID().toString();
+          coordinator.registerWave(correlationId, wave.size());
 
-          // Build and publish job execution message
-          JobExecuteMessage jobMsg = new JobExecuteMessage();
-          jobMsg.setPipelineRunId(msg.getPipelineRunId());
-          jobMsg.setCorrelationId(correlationId);
-          jobMsg.setJobName(job.name);
-          jobMsg.setStageName(stage.getStageName());
-          jobMsg.setPipelineName(msg.getPipelineName());
-          jobMsg.setImage(job.image);
-          jobMsg.setScripts(job.script);
-          jobMsg.setRepoPath(msg.getRepoPath());
-          jobMsg.setTotalJobsInWave(wave.size());
-          jobMsg.setRunNo(msg.getRunNo());
+          for (Job job : wave) {
+            statusPublisher.jobCreated(msg.getPipelineRunId(),
+                msg.getPipelineName(), msg.getRunNo(),
+                stage.getStageName(), job.name);
 
-          rabbitTemplate.convertAndSend(
-              RabbitMqConfig.JOB_EXCHANGE,
-              RabbitMqConfig.JOB_EXECUTE_KEY,
-              jobMsg);
+            JobExecuteMessage jobMsg = new JobExecuteMessage();
+            jobMsg.setPipelineRunId(msg.getPipelineRunId());
+            jobMsg.setCorrelationId(correlationId);
+            jobMsg.setJobName(job.name);
+            jobMsg.setStageName(stage.getStageName());
+            jobMsg.setPipelineName(msg.getPipelineName());
+            jobMsg.setImage(job.image);
+            jobMsg.setScripts(job.script);
+            jobMsg.setWorkspacePath(workspacePath.toString());
+            jobMsg.setTotalJobsInWave(wave.size());
+            jobMsg.setRunNo(msg.getRunNo());
 
-          System.out.println("  > Dispatched job: " + job.name
-              + " [" + job.image + "] wave=" + correlationId);
-        }
+            rabbitTemplate.convertAndSend(
+                RabbitMqConfig.JOB_EXCHANGE,
+                RabbitMqConfig.JOB_EXECUTE_KEY,
+                jobMsg);
 
-        // Fan-in: wait for all jobs in this wave to complete
-        StageCoordinatorService.WaveTracker tracker =
-            coordinator.awaitWave(correlationId);
-        coordinator.removeWave(correlationId);
-
-        if (tracker == null || !tracker.allSucceeded()) {
-          stageFailed = true;
-          pipelineFailed = true;
-          if (tracker != null && tracker.isTimedOut()) {
-            System.err.println("  x Wave timed out in stage '"
-                + stage.getStageName() + "'");
+            System.out.println("  > Dispatched job: " + job.name
+                + " [" + job.image + "] wave=" + correlationId);
           }
-          break; // Stop processing waves in this stage
+
+          StageCoordinatorService.WaveTracker tracker =
+              coordinator.awaitWave(correlationId);
+          coordinator.removeWave(correlationId);
+
+          if (tracker == null || !tracker.allSucceeded()) {
+            stageFailed = true;
+            pipelineFailed = true;
+            if (tracker != null && tracker.isTimedOut()) {
+              System.err.println("  x Wave timed out in stage '"
+                  + stage.getStageName() + "'");
+            }
+            break;
+          }
+        }
+
+        statusPublisher.stageCompleted(msg.getPipelineRunId(),
+            msg.getPipelineName(), msg.getRunNo(),
+            stage.getStageName(), !stageFailed);
+
+        eventPublisher.publishStageCompleted(msg.getPipelineRunId(),
+            msg.getPipelineName(), msg.getRunNo(), stage.getStageName(),
+            !stageFailed);
+
+        if (pipelineFailed) {
+          System.err.println("=== Pipeline FAILED ===");
+          break;
         }
       }
 
-      // Update stage record via MQ
-      statusPublisher.stageCompleted(msg.getPipelineRunId(),
-          msg.getPipelineName(), msg.getRunNo(),
-          stage.getStageName(), !stageFailed);
+      statusPublisher.pipelineCompleted(msg.getPipelineRunId(),
+          msg.getPipelineName(), msg.getRunNo(), !pipelineFailed);
 
-      eventPublisher.publishStageCompleted(msg.getPipelineRunId(),
-          msg.getPipelineName(), msg.getRunNo(), stage.getStageName(),
-          !stageFailed);
+      eventPublisher.publishPipelineCompleted(msg.getPipelineRunId(),
+          msg.getPipelineName(), msg.getRunNo(), !pipelineFailed);
 
-      if (pipelineFailed) {
-        System.err.println("=== Pipeline FAILED ===");
-        break;
+      if (!pipelineFailed) {
+        System.out.println("\n=== Pipeline PASSED ===");
       }
-    }
-
-    // Update pipeline record via MQ
-    statusPublisher.pipelineCompleted(msg.getPipelineRunId(),
-        msg.getPipelineName(), msg.getRunNo(), !pipelineFailed);
-
-    eventPublisher.publishPipelineCompleted(msg.getPipelineRunId(),
-        msg.getPipelineName(), msg.getRunNo(), !pipelineFailed);
-
-    if (!pipelineFailed) {
-      System.out.println("\n=== Pipeline PASSED ===");
+    } finally {
+      workspaceArchiveService.cleanupWorkspace(workspacePath);
     }
   }
 

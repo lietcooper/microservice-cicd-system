@@ -151,7 +151,7 @@ class JobExecutionListenerTest {
     msg.setRunNo(1);
     msg.setImage(image);
     msg.setScripts(List.of("echo run"));
-    msg.setRepoPath("/tmp/repo");
+    msg.setWorkspacePath("/tmp/repo");
     msg.setTotalJobsInWave(1);
     return msg;
   }

@@ -24,7 +24,7 @@ class MessageSerializationTest {
   void testPipelineExecuteMessageRoundTrip() throws Exception {
     PipelineExecuteMessage original = new PipelineExecuteMessage(
         42L, "default", 5, "pipeline:\n  name: default",
-        "/repo", "main", "abc123");
+        new byte[] {1, 2}, "main", "abc123");
 
     String json = mapper.writeValueAsString(original);
     PipelineExecuteMessage deserialized = mapper.readValue(
@@ -34,7 +34,7 @@ class MessageSerializationTest {
     assertEquals("default", deserialized.getPipelineName());
     assertEquals(5, deserialized.getRunNo());
     assertEquals("pipeline:\n  name: default", deserialized.getPipelineYaml());
-    assertEquals("/repo", deserialized.getRepoPath());
+    assertArrayEquals(new byte[] {1, 2}, deserialized.getWorkspaceArchive());
     assertEquals("main", deserialized.getGitBranch());
     assertEquals("abc123", deserialized.getGitCommit());
   }
@@ -46,7 +46,7 @@ class MessageSerializationTest {
     msg.setPipelineName("test");
     msg.setRunNo(1);
     msg.setPipelineYaml("yaml");
-    msg.setRepoPath("/path");
+    msg.setWorkspaceArchive(new byte[] {9});
     msg.setGitBranch("dev");
     msg.setGitCommit("def456");
 
@@ -66,7 +66,7 @@ class MessageSerializationTest {
     original.setRunNo(5);
     original.setImage("gradle:jdk21");
     original.setScripts(Arrays.asList("gradle build", "gradle test"));
-    original.setRepoPath("/repo");
+    original.setWorkspacePath("/repo");
     original.setTotalJobsInWave(3);
 
     String json = mapper.writeValueAsString(original);
@@ -83,7 +83,7 @@ class MessageSerializationTest {
     assertEquals(2, deserialized.getScripts().size());
     assertEquals("gradle build", deserialized.getScripts().get(0));
     assertEquals("gradle test", deserialized.getScripts().get(1));
-    assertEquals("/repo", deserialized.getRepoPath());
+    assertEquals("/repo", deserialized.getWorkspacePath());
     assertEquals(3, deserialized.getTotalJobsInWave());
   }
 

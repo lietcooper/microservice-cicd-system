@@ -18,6 +18,10 @@ public class GitHelper {
     return git(repoPath, "rev-parse", "HEAD");
   }
 
+  public static String remoteOriginUrl(String repoPath) {
+    return git(repoPath, "remote", "get-url", "origin");
+  }
+
   public static boolean isGitRoot(String path) {
     return new File(path, ".git").isDirectory();
   }

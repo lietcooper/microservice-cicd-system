@@ -11,11 +11,13 @@ This document expands on the initial design with a detailed high-level architect
 
 | From | To | Protocol | Direction | Purpose |
 |------|----|----------|-----------|---------|
-| CLI | REST Service | HTTP/REST | Unidirectional (request) | Submit run requests (metadata only: repo URL, branch, commit, pipeline name), query reports |
+| CLI | REST Service | HTTP/REST | Unidirectional (request) | Submit run requests (`repoUrl`, branch, commit, pipeline selector), query reports |
 | REST Service | CLI | HTTP/REST | Unidirectional (response) | Return execution results, report data |
-| REST Service | Git Repository | Git (JGit / CLI) | Unidirectional | Clone repo at specified branch/commit to obtain pipeline config and source code |
-| REST Service | DataStore | SQL (JDBC) | Bidirectional | Read/write pipeline run records, stage/job status |
-| REST Service | Docker Engine | Docker API (HTTP) | Bidirectional | Pull images, create/start/stop containers (with cloned repo mounted as volume), read output |
+| REST Service | Git Repository | Git CLI | Unidirectional | Clone repo at specified branch/commit to obtain committed snapshot |
+| REST Service | RabbitMQ | AMQP | Unidirectional | Publish pipeline execution messages with archived workspace snapshot |
+| Worker | RabbitMQ | AMQP | Bidirectional | Consume pipeline/job messages and publish job results and status updates |
+| Worker | Docker Engine | Docker API | Bidirectional | Pull images, create/start/stop containers, mount extracted workspace, capture output |
+| REST Service | DataStore | SQL (JDBC) | Bidirectional | Read/write pipeline run, stage, and job status |
 
 **Note:** The CLI also performs local-only operations (verify, dryrun) that do not involve the REST Service. These operations parse and validate YAML files entirely within the CLI process.
 
@@ -28,7 +30,8 @@ The CLI (`cicd`) is the primary user-facing interface built with picocli.
 **Responsibilities:**
 - Parse and validate pipeline configuration files locally for `verify` and `dryrun` (YAML v1.2)
 - Compute and display execution order (dryrun)
-- For `run`: validate that `--branch`/`--commit` match the current checkout, then send metadata (repo URL, branch, commit, pipeline name) to the REST Service. The CLI does **not** send pipeline config or source code.
+- For `run`: send repository metadata (`repoUrl`, branch, commit, and pipeline selector) to the REST Service
+- Optionally upload raw pipeline YAML when using file-based run mode
 - Display pipeline status and reports to users
 
 **Subcommands:**
@@ -42,29 +45,43 @@ The CLI (`cicd`) is the primary user-facing interface built with picocli.
 
 ### 2. REST Service (Spring Boot)
 
-The REST Service is the backend that orchestrates pipeline execution and manages state. It acts as the central coordinator between the CLI, DataStore, and Docker Engine.
+The REST Service is the control plane. It accepts execution requests, creates committed Git snapshots, validates configuration, stores run metadata, and publishes execution work to RabbitMQ.
 
 **Responsibilities:**
 - Receive and process requests from CLI
 - Clone the git repository at the specified branch and commit into a temporary directory
 - Read and validate the pipeline configuration from `.pipelines/` in the cloned repo
-- Manage pipeline execution lifecycle (stages run sequentially, jobs within a stage respect `needs` ordering)
-- Coordinate Docker container operations (pull images, run containers with cloned repo mounted as a volume, collect output)
+- Archive the committed snapshot into a portable workspace bundle
+- Publish execution requests to RabbitMQ
 - Store and retrieve execution data from DataStore
 - Track git metadata (branch, commit hash, repo) for each run
-- Clean up the cloned temporary directory after the pipeline run completes
+- Persist status updates received from workers
+- Clean up the cloned temporary directory after the workspace archive is created
+
+### 3. Worker Service (Spring Boot)
+
+The Worker is the execution plane. It consumes pipeline messages, extracts the archived workspace, orchestrates stages and waves, runs jobs in Docker, and reports status back to the server.
+
+**Responsibilities:**
+- Consume pipeline execution messages from RabbitMQ
+- Extract archived workspaces into temporary local directories
+- Parse the pipeline YAML and compute stage/job wave ordering
+- Dispatch job messages and collect job results
+- Run jobs inside Docker containers with the extracted workspace mounted
+- Publish pipeline, stage, and job status updates back to the server
+- Clean up extracted workspaces after execution
 
 **Key Endpoints:**
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/pipelines/run` | Start a pipeline execution. Payload: `{repoUrl, branch, commit, pipelineName}` |
+| `POST` | `/api/pipelines/execute` | Start a pipeline execution. Payload includes `repoUrl`, `branch`, `commit`, and `pipelineName` or `pipelineYaml` |
 | `GET` | `/pipelines/{name}/runs` | Get all runs for a pipeline |
 | `GET` | `/pipelines/{name}/runs/{runNo}` | Get a specific run |
 | `GET` | `/pipelines/{name}/runs/{runNo}/stages/{stage}` | Get a specific stage in a run |
 | `GET` | `/pipelines/{name}/runs/{runNo}/stages/{stage}/jobs/{job}` | Get a specific job |
 
-### 3. DataStore (SQLite / PostgreSQL)
+### 4. DataStore (PostgreSQL)
 
 The DataStore persists all pipeline execution data.
 
@@ -83,10 +100,9 @@ The DataStore persists all pipeline execution data.
 | `job_runs` | pipeline, run-no, stage, job name, status, start-time, end-time |
 
 **Storage Strategy:**
-- **Local mode (Phase 1):** SQLite file-based database. No external setup required. Data is lost when the system is torn down (per requirements FAQ).
-- **Remote mode (Phase 2):** PostgreSQL. Persistent across restarts (per requirements FAQ).
+- Current implementation uses PostgreSQL for both local and remote-style deployments.
 
-### 4. Docker Engine
+### 5. Docker Engine
 
 Docker Engine runs the actual CI/CD jobs as containers.
 
@@ -94,7 +110,7 @@ Docker Engine runs the actual CI/CD jobs as containers.
 - Pull Docker images specified in pipeline configuration (`image` field)
 - Create and start containers for each job
 - Execute `script` commands inside the container
-- Return container output and exit codes to the REST Service
+- Return container output and exit codes to the Worker
 
 ## Deployment Modes
 
@@ -105,8 +121,10 @@ All components run on the same developer machine:
 ```
 Developer Machine
 ├── CLI (cicd)              -- user runs commands here
-├── REST Service            -- runs as local process (localhost)
-├── DataStore (SQLite)      -- file on local disk
+├── REST Service            -- control plane
+├── Worker Service          -- execution plane
+├── DataStore (PostgreSQL)
+├── RabbitMQ
 └── Docker Engine           -- runs containers locally
 ```
 
@@ -117,7 +135,9 @@ CLI runs locally, everything else runs remotely:
 ```
 Developer Machine           Remote Server
 ├── CLI (cicd)              ├── REST Service
+                            ├── Worker Service
                             ├── DataStore (PostgreSQL)
+                            ├── RabbitMQ
                             └── Docker Engine
 ```
 
@@ -130,7 +150,7 @@ The transition from local to remote only requires changing the REST Service URL 
 1. **Clean separation of concerns** -- Each component has a single responsibility (CLI for user interaction, REST for orchestration, DataStore for persistence, Docker for execution).
 2. **Network-ready from day one** -- Using REST/HTTP between CLI and the service means the same architecture works for both local and remote modes without redesign.
 3. **Technology flexibility** -- Components communicate via standard protocols (HTTP, SQL, Docker API), so individual components can be replaced independently (e.g., swap SQLite for PostgreSQL).
-4. **Scalability path** -- The REST service could be scaled horizontally in the future, and Docker containers could run on multiple worker nodes.
+4. **Scalability path** -- The control plane and worker plane are separated, so execution can move to multiple workers later.
 5. **Debuggability** -- REST APIs are easy to inspect and test independently using tools like curl or Postman.
 
 ### Cons
@@ -138,7 +158,7 @@ The transition from local to remote only requires changing the REST Service URL 
 1. **Overhead for local mode** -- Running a REST service locally adds startup time and complexity compared to direct in-process calls.
 2. **More moving parts** -- Developers need to have the REST Service running before they can use `run` or `report` commands.
 3. **Network dependency** -- Even in local mode, the CLI-to-REST communication goes over HTTP, adding latency compared to direct function calls.
-4. **Deployment complexity** -- Setting up the full system requires starting multiple processes (REST service, database, Docker), which increases the barrier for first-time setup.
+4. **Deployment complexity** -- Setting up the full system requires server, worker, RabbitMQ, PostgreSQL, and Docker.
 
 ### Why We Chose This Design
 

@@ -22,7 +22,7 @@ public class JobExecuteMessage {
   private int runNo;
   private String image;
   private List<String> scripts;
-  private String repoPath;
+  private String workspacePath;
   private int totalJobsInWave;
 
 }

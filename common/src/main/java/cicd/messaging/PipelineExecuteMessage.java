@@ -19,7 +19,7 @@ public class PipelineExecuteMessage {
   private String pipelineName;
   private int runNo;
   private String pipelineYaml;
-  private String repoPath;
+  private byte[] workspaceArchive;
   private String gitBranch;
   private String gitCommit;
 

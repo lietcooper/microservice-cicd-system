@@ -48,7 +48,7 @@ public class JobExecutionListener {
 
     // Execute in Docker
     JobResult result = dockerRunner.runJob(
-        msg.getImage(), msg.getScripts(), msg.getRepoPath());
+        msg.getImage(), msg.getScripts(), msg.getWorkspacePath());
 
     if (result.output() != null && !result.output().isBlank()) {
       result.output().lines().forEach(l -> System.out.println("    " + l));
