@@ -7,25 +7,17 @@ import cicd.messaging.PipelineExecuteMessage;
 import cicd.model.Job;
 import cicd.model.Pipeline;
 import cicd.parser.YamlParser;
-import cicd.persistence.entity.JobRunEntity;
-import cicd.persistence.entity.PipelineRunEntity;
-import cicd.persistence.entity.RunStatus;
-import cicd.persistence.entity.StageRunEntity;
-import cicd.persistence.repository.JobRunRepository;
-import cicd.persistence.repository.PipelineRunRepository;
-import cicd.persistence.repository.StageRunRepository;
 import cicd.service.StageCoordinatorService;
 import cicd.service.StatusEventPublisher;
+import cicd.service.StatusUpdatePublisher;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Orchestrates pipeline execution: receives pipeline messages,
@@ -35,26 +27,20 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 public class PipelineOrchestrationListener {
 
-  private final PipelineRunRepository pipelineRunRepo;
-  private final StageRunRepository stageRunRepo;
-  private final JobRunRepository jobRunRepo;
   private final RabbitTemplate rabbitTemplate;
   private final StageCoordinatorService coordinator;
   private final StatusEventPublisher eventPublisher;
+  private final StatusUpdatePublisher statusPublisher;
 
   public PipelineOrchestrationListener(
-      PipelineRunRepository pipelineRunRepo,
-      StageRunRepository stageRunRepo,
-      JobRunRepository jobRunRepo,
       RabbitTemplate rabbitTemplate,
       StageCoordinatorService coordinator,
-      StatusEventPublisher eventPublisher) {
-    this.pipelineRunRepo = pipelineRunRepo;
-    this.stageRunRepo = stageRunRepo;
-    this.jobRunRepo = jobRunRepo;
+      StatusEventPublisher eventPublisher,
+      StatusUpdatePublisher statusPublisher) {
     this.rabbitTemplate = rabbitTemplate;
     this.coordinator = coordinator;
     this.eventPublisher = eventPublisher;
+    this.statusPublisher = statusPublisher;
   }
 
   @RabbitListener(queues = RabbitMqConfig.PIPELINE_EXECUTE_QUEUE,
@@ -63,26 +49,18 @@ public class PipelineOrchestrationListener {
     System.out.println("=== Orchestrator: running pipeline '"
         + msg.getPipelineName() + "' run #" + msg.getRunNo() + " ===");
 
-    PipelineRunEntity pipelineRun = pipelineRunRepo
-        .findById(msg.getPipelineRunId()).orElse(null);
-    if (pipelineRun == null) {
-      System.err.println("Pipeline run not found: " + msg.getPipelineRunId());
-      return;
-    }
-
-    // Update to RUNNING
-    pipelineRun.setStatus(RunStatus.RUNNING);
-    pipelineRun.setStartTime(OffsetDateTime.now());
-    pipelineRunRepo.save(pipelineRun);
-    pipelineRunRepo.flush();
+    // Update to RUNNING via MQ
+    statusPublisher.pipelineRunning(
+        msg.getPipelineRunId(), msg.getPipelineName(), msg.getRunNo());
 
     eventPublisher.publishPipelineStarted(
-        pipelineRun.getId(), msg.getPipelineName(), msg.getRunNo());
+        msg.getPipelineRunId(), msg.getPipelineName(), msg.getRunNo());
 
     // Parse pipeline from YAML
     Pipeline pipeline = parsePipelineYaml(msg.getPipelineYaml());
     if (pipeline == null) {
-      failPipeline(pipelineRun);
+      statusPublisher.pipelineFailed(
+          msg.getPipelineRunId(), msg.getPipelineName(), msg.getRunNo());
       return;
     }
 
@@ -96,17 +74,14 @@ public class PipelineOrchestrationListener {
     for (ExecutionPlanner.WaveStageExecution stage : plan) {
       System.out.println("\n--- Stage: " + stage.getStageName() + " ---");
 
-      // Create stage record
-      StageRunEntity stageRun = new StageRunEntity();
-      stageRun.setPipelineRun(pipelineRun);
-      stageRun.setStageName(stage.getStageName());
-      stageRun.setStageOrder(stageOrder++);
-      stageRun.setStatus(RunStatus.RUNNING);
-      stageRun.setStartTime(OffsetDateTime.now());
-      stageRun = stageRunRepo.save(stageRun);
-      stageRunRepo.flush();
+      int currentStageOrder = stageOrder++;
 
-      eventPublisher.publishStageStarted(pipelineRun.getId(),
+      // Create stage record via MQ
+      statusPublisher.stageStarted(msg.getPipelineRunId(),
+          msg.getPipelineName(), msg.getRunNo(),
+          stage.getStageName(), currentStageOrder);
+
+      eventPublisher.publishStageStarted(msg.getPipelineRunId(),
           msg.getPipelineName(), msg.getRunNo(), stage.getStageName());
 
       boolean stageFailed = false;
@@ -118,20 +93,14 @@ public class PipelineOrchestrationListener {
 
         // Fan-out: publish job messages for all jobs in this wave
         for (Job job : wave) {
-          // Create job record in DB
-          JobRunEntity jobRun = new JobRunEntity();
-          jobRun.setStageRun(stageRun);
-          jobRun.setJobName(job.name);
-          jobRun.setStatus(RunStatus.PENDING);
-          jobRun.setStartTime(OffsetDateTime.now());
-          jobRun = jobRunRepo.save(jobRun);
-          jobRunRepo.flush();
+          // Create job record via MQ
+          statusPublisher.jobCreated(msg.getPipelineRunId(),
+              msg.getPipelineName(), msg.getRunNo(),
+              stage.getStageName(), job.name);
 
           // Build and publish job execution message
           JobExecuteMessage jobMsg = new JobExecuteMessage();
           jobMsg.setPipelineRunId(msg.getPipelineRunId());
-          jobMsg.setStageRunId(stageRun.getId());
-          jobMsg.setJobRunId(jobRun.getId());
           jobMsg.setCorrelationId(correlationId);
           jobMsg.setJobName(job.name);
           jobMsg.setStageName(stage.getStageName());
@@ -140,6 +109,7 @@ public class PipelineOrchestrationListener {
           jobMsg.setScripts(job.script);
           jobMsg.setRepoPath(msg.getRepoPath());
           jobMsg.setTotalJobsInWave(wave.size());
+          jobMsg.setRunNo(msg.getRunNo());
 
           rabbitTemplate.convertAndSend(
               RabbitMqConfig.JOB_EXCHANGE,
@@ -166,13 +136,12 @@ public class PipelineOrchestrationListener {
         }
       }
 
-      // Update stage record
-      stageRun.setEndTime(OffsetDateTime.now());
-      stageRun.setStatus(stageFailed ? RunStatus.FAILED : RunStatus.SUCCESS);
-      stageRunRepo.save(stageRun);
-      stageRunRepo.flush();
+      // Update stage record via MQ
+      statusPublisher.stageCompleted(msg.getPipelineRunId(),
+          msg.getPipelineName(), msg.getRunNo(),
+          stage.getStageName(), !stageFailed);
 
-      eventPublisher.publishStageCompleted(pipelineRun.getId(),
+      eventPublisher.publishStageCompleted(msg.getPipelineRunId(),
           msg.getPipelineName(), msg.getRunNo(), stage.getStageName(),
           !stageFailed);
 
@@ -182,13 +151,11 @@ public class PipelineOrchestrationListener {
       }
     }
 
-    // Update pipeline record
-    pipelineRun.setEndTime(OffsetDateTime.now());
-    pipelineRun.setStatus(pipelineFailed ? RunStatus.FAILED : RunStatus.SUCCESS);
-    pipelineRunRepo.save(pipelineRun);
-    pipelineRunRepo.flush();
+    // Update pipeline record via MQ
+    statusPublisher.pipelineCompleted(msg.getPipelineRunId(),
+        msg.getPipelineName(), msg.getRunNo(), !pipelineFailed);
 
-    eventPublisher.publishPipelineCompleted(pipelineRun.getId(),
+    eventPublisher.publishPipelineCompleted(msg.getPipelineRunId(),
         msg.getPipelineName(), msg.getRunNo(), !pipelineFailed);
 
     if (!pipelineFailed) {
@@ -214,12 +181,5 @@ public class PipelineOrchestrationListener {
       System.err.println("Failed to parse pipeline YAML: " + e.getMessage());
       return null;
     }
-  }
-
-  private void failPipeline(PipelineRunEntity pipelineRun) {
-    pipelineRun.setStatus(RunStatus.FAILED);
-    pipelineRun.setEndTime(OffsetDateTime.now());
-    pipelineRunRepo.save(pipelineRun);
-    pipelineRunRepo.flush();
   }
 }

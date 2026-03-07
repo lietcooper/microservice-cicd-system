@@ -1,4 +1,4 @@
-package cicd.api;
+package cicd.api.controller;
 
 import cicd.api.dto.ExecutePipelineRequest;
 import cicd.api.dto.ExecutePipelineResponse;

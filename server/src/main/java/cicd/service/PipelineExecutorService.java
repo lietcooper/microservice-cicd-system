@@ -1,7 +1,6 @@
 package cicd.service;
 
 import cicd.docker.DockerRunner;
-import cicd.docker.LocalDockerRunner;
 import cicd.executor.ExecutionPlanner;
 import cicd.executor.JobResult;
 import cicd.model.Job;
@@ -16,31 +15,27 @@ import cicd.persistence.repository.StageRunRepository;
 import cicd.util.GitHelper;
 import java.time.OffsetDateTime;
 import java.util.List;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@Service
+/**
+ * Legacy synchronous pipeline executor. Replaced by async worker
+ * via RabbitMQ. Kept for reference; not a Spring bean.
+ */
 public class PipelineExecutorService {
 
-    @Autowired
     private PipelineRunRepository pipelineRunRepo;
-
-    @Autowired
     private StageRunRepository stageRunRepo;
-
-    @Autowired
     private JobRunRepository jobRunRepo;
-
     private final DockerRunner dockerRunner;
 
-    public PipelineExecutorService() {
-        this.dockerRunner = new LocalDockerRunner();
-    }
-
-    // Constructor for testing with mock DockerRunner
-    public PipelineExecutorService(DockerRunner dockerRunner) {
+    public PipelineExecutorService(DockerRunner dockerRunner,
+        PipelineRunRepository pipelineRunRepo,
+        StageRunRepository stageRunRepo,
+        JobRunRepository jobRunRepo) {
         this.dockerRunner = dockerRunner;
+        this.pipelineRunRepo = pipelineRunRepo;
+        this.stageRunRepo = stageRunRepo;
+        this.jobRunRepo = jobRunRepo;
     }
 
     @Transactional

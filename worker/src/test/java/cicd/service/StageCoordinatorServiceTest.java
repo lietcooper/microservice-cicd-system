@@ -180,8 +180,6 @@ class StageCoordinatorServiceTest {
     msg.setExitCode(success ? 0 : 1);
     msg.setCorrelationId("test-corr");
     msg.setPipelineRunId(1L);
-    msg.setStageRunId(1L);
-    msg.setJobRunId(1L);
     return msg;
   }
 }

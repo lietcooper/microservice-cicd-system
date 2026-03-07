@@ -59,12 +59,11 @@ class MessageSerializationTest {
   void testJobExecuteMessageRoundTrip() throws Exception {
     JobExecuteMessage original = new JobExecuteMessage();
     original.setPipelineRunId(1L);
-    original.setStageRunId(2L);
-    original.setJobRunId(3L);
     original.setCorrelationId("corr-123");
     original.setJobName("compile");
     original.setStageName("build");
     original.setPipelineName("default");
+    original.setRunNo(5);
     original.setImage("gradle:jdk21");
     original.setScripts(Arrays.asList("gradle build", "gradle test"));
     original.setRepoPath("/repo");
@@ -75,12 +74,11 @@ class MessageSerializationTest {
         json, JobExecuteMessage.class);
 
     assertEquals(1L, deserialized.getPipelineRunId());
-    assertEquals(2L, deserialized.getStageRunId());
-    assertEquals(3L, deserialized.getJobRunId());
     assertEquals("corr-123", deserialized.getCorrelationId());
     assertEquals("compile", deserialized.getJobName());
     assertEquals("build", deserialized.getStageName());
     assertEquals("default", deserialized.getPipelineName());
+    assertEquals(5, deserialized.getRunNo());
     assertEquals("gradle:jdk21", deserialized.getImage());
     assertEquals(2, deserialized.getScripts().size());
     assertEquals("gradle build", deserialized.getScripts().get(0));
@@ -93,8 +91,6 @@ class MessageSerializationTest {
   void testJobResultMessageRoundTrip() throws Exception {
     JobResultMessage original = new JobResultMessage();
     original.setPipelineRunId(1L);
-    original.setStageRunId(2L);
-    original.setJobRunId(3L);
     original.setCorrelationId("corr-456");
     original.setJobName("compile");
     original.setStageName("build");
@@ -108,8 +104,6 @@ class MessageSerializationTest {
         json, JobResultMessage.class);
 
     assertEquals(1L, deserialized.getPipelineRunId());
-    assertEquals(2L, deserialized.getStageRunId());
-    assertEquals(3L, deserialized.getJobRunId());
     assertEquals("corr-456", deserialized.getCorrelationId());
     assertEquals("compile", deserialized.getJobName());
     assertEquals("build", deserialized.getStageName());
@@ -215,5 +209,33 @@ class MessageSerializationTest {
     assertEquals(127, deserialized.getExitCode());
     assertNull(deserialized.getOutput());
     assertNull(deserialized.getCorrelationId());
+  }
+
+  @Test
+  void testStatusUpdateMessageRoundTrip() throws Exception {
+    StatusUpdateMessage original = new StatusUpdateMessage();
+    original.setEntityType("STAGE");
+    original.setPipelineRunId(10L);
+    original.setPipelineName("default");
+    original.setRunNo(2);
+    original.setStageName("build");
+    original.setStageOrder(0);
+    original.setStatus("RUNNING");
+    original.setStartTime(OffsetDateTime.now());
+
+    String json = mapper.writeValueAsString(original);
+    StatusUpdateMessage deserialized = mapper.readValue(
+        json, StatusUpdateMessage.class);
+
+    assertEquals("STAGE", deserialized.getEntityType());
+    assertEquals(10L, deserialized.getPipelineRunId());
+    assertEquals("default", deserialized.getPipelineName());
+    assertEquals(2, deserialized.getRunNo());
+    assertEquals("build", deserialized.getStageName());
+    assertEquals(0, deserialized.getStageOrder());
+    assertNull(deserialized.getJobName());
+    assertEquals("RUNNING", deserialized.getStatus());
+    assertNotNull(deserialized.getStartTime());
+    assertNull(deserialized.getEndTime());
   }
 }

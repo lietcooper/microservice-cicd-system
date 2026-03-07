@@ -8,6 +8,7 @@ import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.core.TopicExchange;
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
@@ -22,6 +23,7 @@ public class RabbitMqConfig {
   public static final String PIPELINE_EXCHANGE = "cicd.pipeline.direct";
   public static final String JOB_EXCHANGE = "cicd.job.direct";
   public static final String JOB_RESULTS_EXCHANGE = "cicd.job-results.direct";
+  public static final String STATUS_EXCHANGE = "cicd.status.direct";
   public static final String EVENTS_EXCHANGE = "cicd.events.topic";
   public static final String DLX_EXCHANGE = "cicd.dlx";
 
@@ -29,6 +31,7 @@ public class RabbitMqConfig {
   public static final String PIPELINE_EXECUTE_QUEUE = "cicd.pipeline.execute";
   public static final String JOB_EXECUTE_QUEUE = "cicd.job.execute";
   public static final String JOB_RESULTS_QUEUE = "cicd.job.results";
+  public static final String STATUS_UPDATE_QUEUE = "cicd.status.update";
   public static final String EVENTS_QUEUE = "cicd.events";
   public static final String DEAD_LETTER_QUEUE = "cicd.dead-letters";
 
@@ -36,6 +39,7 @@ public class RabbitMqConfig {
   public static final String PIPELINE_EXECUTE_KEY = "pipeline.execute";
   public static final String JOB_EXECUTE_KEY = "job.execute";
   public static final String JOB_RESULT_KEY = "job.result";
+  public static final String STATUS_UPDATE_KEY = "status.update";
 
   // --- Exchanges ---
 
@@ -52,6 +56,11 @@ public class RabbitMqConfig {
   @Bean
   public DirectExchange jobResultsExchange() {
     return new DirectExchange(JOB_RESULTS_EXCHANGE, true, false);
+  }
+
+  @Bean
+  public DirectExchange statusExchange() {
+    return new DirectExchange(STATUS_EXCHANGE, true, false);
   }
 
   @Bean
@@ -86,6 +95,13 @@ public class RabbitMqConfig {
   }
 
   @Bean
+  public Queue statusUpdateQueue() {
+    return QueueBuilder.durable(STATUS_UPDATE_QUEUE)
+        .withArgument("x-dead-letter-exchange", DLX_EXCHANGE)
+        .build();
+  }
+
+  @Bean
   public Queue eventsQueue() {
     return QueueBuilder.durable(EVENTS_QUEUE).build();
   }
@@ -116,6 +132,12 @@ public class RabbitMqConfig {
   }
 
   @Bean
+  public Binding statusUpdateBinding() {
+    return BindingBuilder.bind(statusUpdateQueue())
+        .to(statusExchange()).with(STATUS_UPDATE_KEY);
+  }
+
+  @Bean
   public Binding eventsBinding() {
     return BindingBuilder.bind(eventsQueue())
         .to(eventsExchange()).with("#");
@@ -142,5 +164,17 @@ public class RabbitMqConfig {
     RabbitTemplate template = new RabbitTemplate(connectionFactory);
     template.setMessageConverter(jsonMessageConverter);
     return template;
+  }
+
+  @Bean
+  public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
+      ConnectionFactory connectionFactory,
+      MessageConverter jsonMessageConverter) {
+    SimpleRabbitListenerContainerFactory factory =
+        new SimpleRabbitListenerContainerFactory();
+    factory.setConnectionFactory(connectionFactory);
+    factory.setMessageConverter(jsonMessageConverter);
+    factory.setPrefetchCount(1);
+    return factory;
   }
 }

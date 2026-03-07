@@ -5,11 +5,8 @@ import cicd.docker.LocalDockerRunner;
 import cicd.executor.JobResult;
 import cicd.messaging.JobExecuteMessage;
 import cicd.messaging.JobResultMessage;
-import cicd.persistence.entity.JobRunEntity;
-import cicd.persistence.entity.RunStatus;
-import cicd.persistence.repository.JobRunRepository;
 import cicd.service.StatusEventPublisher;
-import java.time.OffsetDateTime;
+import cicd.service.StatusUpdatePublisher;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
@@ -23,15 +20,16 @@ public class JobExecutionListener {
 
   private final LocalDockerRunner dockerRunner;
   private final RabbitTemplate rabbitTemplate;
-  private final JobRunRepository jobRunRepo;
   private final StatusEventPublisher eventPublisher;
+  private final StatusUpdatePublisher statusPublisher;
 
   public JobExecutionListener(RabbitTemplate rabbitTemplate,
-      JobRunRepository jobRunRepo, StatusEventPublisher eventPublisher) {
+      StatusEventPublisher eventPublisher,
+      StatusUpdatePublisher statusPublisher) {
     this.dockerRunner = new LocalDockerRunner();
     this.rabbitTemplate = rabbitTemplate;
-    this.jobRunRepo = jobRunRepo;
     this.eventPublisher = eventPublisher;
+    this.statusPublisher = statusPublisher;
   }
 
   @RabbitListener(queues = RabbitMqConfig.JOB_EXECUTE_QUEUE)
@@ -39,17 +37,14 @@ public class JobExecutionListener {
     System.out.println("  > Job Worker: executing '" + msg.getJobName()
         + "' [" + msg.getImage() + "]");
 
-    // Update job status to RUNNING
-    JobRunEntity jobRun = jobRunRepo.findById(msg.getJobRunId()).orElse(null);
-    if (jobRun != null) {
-      jobRun.setStatus(RunStatus.RUNNING);
-      jobRun.setStartTime(OffsetDateTime.now());
-      jobRunRepo.save(jobRun);
-      jobRunRepo.flush();
-    }
+    // Update job status to RUNNING via MQ
+    statusPublisher.jobStarted(msg.getPipelineRunId(),
+        msg.getPipelineName(), msg.getRunNo(),
+        msg.getStageName(), msg.getJobName());
 
     eventPublisher.publishJobStarted(msg.getPipelineRunId(),
-        msg.getPipelineName(), 0, msg.getStageName(), msg.getJobName());
+        msg.getPipelineName(), msg.getRunNo(),
+        msg.getStageName(), msg.getJobName());
 
     // Execute in Docker
     JobResult result = dockerRunner.runJob(
@@ -59,23 +54,18 @@ public class JobExecutionListener {
       result.output.lines().forEach(l -> System.out.println("    " + l));
     }
 
-    // Update job in DB
-    if (jobRun != null) {
-      jobRun.setEndTime(OffsetDateTime.now());
-      jobRun.setStatus(result.ok() ? RunStatus.SUCCESS : RunStatus.FAILED);
-      jobRunRepo.save(jobRun);
-      jobRunRepo.flush();
-    }
+    // Update job status via MQ
+    statusPublisher.jobCompleted(msg.getPipelineRunId(),
+        msg.getPipelineName(), msg.getRunNo(),
+        msg.getStageName(), msg.getJobName(), result.ok());
 
     eventPublisher.publishJobCompleted(msg.getPipelineRunId(),
-        msg.getPipelineName(), 0, msg.getStageName(), msg.getJobName(),
-        result.ok());
+        msg.getPipelineName(), msg.getRunNo(),
+        msg.getStageName(), msg.getJobName(), result.ok());
 
     // Publish result back to orchestrator
     JobResultMessage resultMsg = new JobResultMessage();
     resultMsg.setPipelineRunId(msg.getPipelineRunId());
-    resultMsg.setStageRunId(msg.getStageRunId());
-    resultMsg.setJobRunId(msg.getJobRunId());
     resultMsg.setCorrelationId(msg.getCorrelationId());
     resultMsg.setJobName(msg.getJobName());
     resultMsg.setStageName(msg.getStageName());
