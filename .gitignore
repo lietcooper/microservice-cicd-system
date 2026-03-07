@@ -27,3 +27,4 @@ run-server.sh
 *.log
 pipeline.log
 server.log
+!sprint5-demo-script.md
