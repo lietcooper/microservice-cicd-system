@@ -108,8 +108,8 @@ class LocalDockerRunnerTest {
         List.of("echo hello"), "/tmp/repo");
 
     assertTrue(result.ok());
-    assertEquals(0, result.exitCode);
-    assertEquals("alpine:latest", result.jobName);
+    assertEquals(0, result.exitCode());
+    assertEquals("alpine:latest", result.jobName());
   }
 
   @Test
@@ -120,7 +120,7 @@ class LocalDockerRunnerTest {
         List.of("exit 1"), "/tmp/repo");
 
     assertFalse(result.ok());
-    assertEquals(1, result.exitCode);
+    assertEquals(1, result.exitCode());
   }
 
   @Test
@@ -132,7 +132,7 @@ class LocalDockerRunnerTest {
         List.of("echo hi"), "/tmp/repo");
 
     assertFalse(result.ok());
-    assertTrue(result.output.contains("pull timed out"));
+    assertTrue(result.output().contains("pull timed out"));
   }
 
   @Test
@@ -144,7 +144,7 @@ class LocalDockerRunnerTest {
         List.of("echo hi"), "/tmp/repo");
 
     assertFalse(result.ok());
-    assertTrue(result.output.contains("image not found"));
+    assertTrue(result.output().contains("image not found"));
   }
 
   @Test
@@ -177,7 +177,7 @@ class LocalDockerRunnerTest {
         List.of("sleep 9999"), "/tmp/repo");
 
     assertFalse(result.ok());
-    assertTrue(result.output.contains("timed out"));
+    assertTrue(result.output().contains("timed out"));
     verify(dockerClient).killContainerCmd("container-123");
   }
 
@@ -190,8 +190,8 @@ class LocalDockerRunnerTest {
         List.of("echo hi"), "/tmp/repo");
 
     assertFalse(result.ok());
-    assertTrue(result.output.contains("docker error"));
-    assertTrue(result.output.contains("Cannot connect to daemon"));
+    assertTrue(result.output().contains("docker error"));
+    assertTrue(result.output().contains("Cannot connect to daemon"));
   }
 
   @Test
@@ -203,7 +203,7 @@ class LocalDockerRunnerTest {
         List.of("echo hi"), "/tmp/repo");
 
     // Should still return a result without throwing
-    assertEquals("alpine:latest", result.jobName);
+    assertEquals("alpine:latest", result.jobName());
   }
 
   @Test

@@ -31,13 +31,13 @@ class GitHelperTest {
   }
 
   @Test
-  void testCurrentBranchReturnsEmptyForNonRepo() {
-    assertEquals("", GitHelper.currentBranch("/tmp"));
+  void testCurrentBranchThrowsForNonRepo() {
+    assertThrows(RuntimeException.class, () -> GitHelper.currentBranch("/tmp"));
   }
 
   @Test
-  void testCurrentBranchReturnsEmptyForNonExistentPath() {
-    assertEquals("", GitHelper.currentBranch("/no/such/path"));
+  void testCurrentBranchThrowsForNonExistentPath() {
+    assertThrows(RuntimeException.class, () -> GitHelper.currentBranch("/no/such/path"));
   }
 
   // ── currentCommit ────────────────────────────────────────────────────────────
@@ -57,8 +57,8 @@ class GitHelperTest {
   }
 
   @Test
-  void testCurrentCommitReturnsEmptyForNonRepo() {
-    assertEquals("", GitHelper.currentCommit("/tmp"));
+  void testCurrentCommitThrowsForNonRepo() {
+    assertThrows(RuntimeException.class, () -> GitHelper.currentCommit("/tmp"));
   }
 
   // ── currentCommitFull ────────────────────────────────────────────────────────
@@ -90,8 +90,8 @@ class GitHelperTest {
   }
 
   @Test
-  void testCurrentCommitFullReturnsEmptyForNonRepo() {
-    assertEquals("", GitHelper.currentCommitFull("/tmp"));
+  void testCurrentCommitFullThrowsForNonRepo() {
+    assertThrows(RuntimeException.class, () -> GitHelper.currentCommitFull("/tmp"));
   }
 
   // ── Consistency checks ───────────────────────────────────────────────────────

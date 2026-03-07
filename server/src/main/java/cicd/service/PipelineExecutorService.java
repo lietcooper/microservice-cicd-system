@@ -96,8 +96,8 @@ public class PipelineExecutorService {
                 // Execute the job
                 JobResult result = dockerRunner.runJob(job.image, job.script, repoPath);
 
-                if (result.output != null && !result.output.isBlank()) {
-                    result.output.lines().forEach(l -> System.out.println("    " + l));
+                if (result.output() != null && !result.output().isBlank()) {
+                    result.output().lines().forEach(l -> System.out.println("    " + l));
                 }
 
                 // 4. JOB END - Update job record with result
@@ -107,7 +107,8 @@ public class PipelineExecutorService {
                     System.out.println("  v Job '" + job.name + "' passed");
                 } else {
                     jobRun.setStatus(RunStatus.FAILED);
-                    System.err.println("  x Job '" + job.name + "' failed (exit " + result.exitCode + ")");
+                    System.err.println("  x Job '" + job.name + "' failed (exit " + result.exitCode()
+                        + ")");
                     stageFailed = true;
                     pipelineFailed = true;
                 }

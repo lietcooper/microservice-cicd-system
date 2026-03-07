@@ -5,7 +5,9 @@ import cicd.model.Pipeline;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.nodes.MappingNode;
 import org.yaml.snakeyaml.nodes.Node;
@@ -49,6 +51,7 @@ public class YamlParser {
 
   private Pipeline parseRoot(MappingNode root) {
     Pipeline p = new Pipeline();
+    Set<String> seenRootKeys = new HashSet<>();
 
     for (NodeTuple t : root.getValue()) {
       String key = str(t.getKeyNode());
@@ -56,10 +59,15 @@ public class YamlParser {
       int line = t.getKeyNode().getStartMark().getLine() + 1;
       int col = t.getKeyNode().getStartMark().getColumn() + 1;
 
+      if (!seenRootKeys.add(key)) {
+        err(t.getKeyNode(), "duplicate key `" + key + "` in YAML root");
+      }
+
       if ("pipeline".equals(key)) {
         parsePipelineBlock(p, val);
       } else if ("stages".equals(key)) {
         p.stages = strList(val, "stages");
+        p.stagesExplicitlyDefined = true;
       } else {
         Job job = parseJob(key, val);
         job.line = line;
@@ -75,9 +83,14 @@ public class YamlParser {
       err(node, "pipeline must be a mapping");
       return;
     }
+    Set<String> seenKeys = new HashSet<>();
     for (NodeTuple t : ((MappingNode) node).getValue()) {
       String key = str(t.getKeyNode());
       Node val = t.getValueNode();
+
+      if (!seenKeys.add(key)) {
+        err(t.getKeyNode(), "duplicate key `" + key + "` in pipeline block");
+      }
 
       if ("name".equals(key)) {
         if (val instanceof ScalarNode) {
@@ -140,14 +153,23 @@ public class YamlParser {
       return j;
     }
 
-
+    Set<String> seenKeys = new HashSet<>();
     for (NodeTuple t : entries){
       String key = str(t.getKeyNode());
       Node val = t.getValueNode();
 
+      if (!seenKeys.add(key)) {
+        err(t.getKeyNode(), "duplicate key `" + key + "` in job `" + name + "`");
+      }
+
       if ("stage".equals(key)) {
         if (val instanceof ScalarNode) {
-          j.stage = ((ScalarNode) val).getValue();
+          ScalarNode scalar = (ScalarNode) val;
+          if (isNonStringTag(scalar.getTag().getValue())) {
+             err(val, "wrong type of value given for `stage` key. Expected value of type String, given " + scalar.getValue());
+          } else {
+            j.stage = scalar.getValue();
+          }
         } else {
           err(val,
               "wrong type of value given for `stage` key. Expected value of type String, given "
@@ -155,7 +177,12 @@ public class YamlParser {
         }
       } else if ("image".equals(key)) {
         if (val instanceof ScalarNode) {
-          j.image = ((ScalarNode) val).getValue();
+          ScalarNode scalar = (ScalarNode) val;
+          if (isNonStringTag(scalar.getTag().getValue())) {
+            err(val, "wrong type of value given for `image` key. Expected value of type String, given " + scalar.getValue());
+          } else {
+            j.image = scalar.getValue();
+          }
         } else {
           err(val,
               "wrong type of value given for `image` key. Expected value of type String, given "
@@ -165,6 +192,7 @@ public class YamlParser {
         j.script = strOrList(val, "script");
       } else if ("needs".equals(key)) {
         j.needs = strList(val, "needs");
+        j.needsExplicitlyDefined = true;
         j.needsLine = val.getStartMark().getLine() + 1;
         j.needsCol = val.getStartMark().getColumn() + 1;
       }
@@ -184,7 +212,14 @@ public class YamlParser {
     }
     for (Node n : ((SequenceNode) node).getValue()) {
       if (n instanceof ScalarNode) {
-        result.add(((ScalarNode) n).getValue());
+        ScalarNode scalar = (ScalarNode) n;
+        if (isNonStringTag(scalar.getTag().getValue())) {
+          err(n, "wrong type of value in `" + field + "` list. Expected String, given " + scalar.getValue());
+        } else {
+          result.add(scalar.getValue());
+        }
+      } else {
+        err(n, "wrong type of value in `" + field + "` list. Expected String, given " + nodeType(n));
       }
     }
     return result;
@@ -192,7 +227,12 @@ public class YamlParser {
 
   private List<String> strOrList(Node node, String field) {
     if (node instanceof ScalarNode) {
-      return List.of(((ScalarNode) node).getValue());
+      ScalarNode scalar = (ScalarNode) node;
+      if (isNonStringTag(scalar.getTag().getValue())) {
+        err(node, "wrong type of value given for `" + field + "` key. Expected String or List, given " + scalar.getValue());
+        return new ArrayList<>();
+      }
+      return List.of(scalar.getValue());
     }
     return strList(node, field);
   }

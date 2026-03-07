@@ -259,10 +259,8 @@ class VerifyCmdTest {
   // ── Missing pipeline.name tests ──────────────────────────────────────────────
 
   @Test
-  void pipelineMissingNameIsValid() throws IOException {
-    // The current implementation does not validate missing pipeline.name
-    // (Validator only checks stages, jobs, needs and cycles)
-    // A pipeline without a name passes validation as a file
+  void pipelineMissingNameIsInvalid() throws IOException {
+    // The implementation now validates missing pipeline.name
     String yaml = """
         pipeline:
           description: no name here
@@ -278,13 +276,13 @@ class VerifyCmdTest {
 
     int code = new CommandLine(new VerifyCmd()).execute(f.toString());
     restoreStreams();
-    assertEquals(0, code);
+    assertEquals(1, code);
+    assertTrue(errContent.toString().contains("pipeline name is required"));
   }
 
   @Test
-  void pipelineWithNeedsJobInDifferentStageIsValid() throws IOException {
-    // The current Validator only checks that needed jobs exist by name,
-    // not that they are in the same stage. Cross-stage needs are currently valid.
+  void pipelineWithNeedsJobInDifferentStageIsInvalid() throws IOException {
+    // A job's needs must be in the same stage.
     String yaml = """
         pipeline:
           name: cross-stage
@@ -307,14 +305,13 @@ class VerifyCmdTest {
 
     int code = new CommandLine(new VerifyCmd()).execute(f.toString());
     restoreStreams();
-    // Cross-stage needs is currently not rejected by the Validator
-    assertEquals(0, code);
+    assertEquals(1, code);
+    assertTrue(errContent.toString().contains("different stage") || errContent.toString().contains("same stage"));
   }
 
   @Test
-  void pipelineWithEmptyNeedsListIsValid() throws IOException {
-    // The current Validator does not check for empty needs lists.
-    // A job with needs: [] passes validation.
+  void pipelineWithEmptyNeedsListIsInvalid() throws IOException {
+    // A needs has a non-empty list of job names.
     String yaml = """
         pipeline:
           name: emptyneedslist
@@ -331,8 +328,8 @@ class VerifyCmdTest {
 
     int code = new CommandLine(new VerifyCmd()).execute(f.toString());
     restoreStreams();
-    // Empty needs list is not currently rejected
-    assertEquals(0, code);
+    assertEquals(1, code);
+    assertTrue(errContent.toString().contains("non-empty"));
   }
 
   @Test
@@ -447,10 +444,9 @@ class VerifyCmdTest {
   }
 
   @Test
-  void pipelineWithNoStagesKeyIsInvalid() throws IOException {
-    // When stages key is absent, p.stages is empty → Validator rejects it
-    // with "at least 1 stage must be defined". Default stages require
-    // explicit declaration in the YAML file.
+  void pipelineWithNoStagesKeyIsValid() throws IOException {
+    // When stages key is absent, default stages (build, test, docs) are assumed.
+    // All default stages must have at least one job.
     String yaml = """
         pipeline:
           name: nostageskey
@@ -458,13 +454,20 @@ class VerifyCmdTest {
           stage: build
           image: alpine
           script: echo build
+        test:
+          stage: test
+          image: alpine
+          script: echo test
+        docs:
+          stage: docs
+          image: alpine
+          script: echo docs
         """;
     Path f = tmp.resolve("nostageskey.yaml");
     Files.writeString(f, yaml);
 
     int code = new CommandLine(new VerifyCmd()).execute(f.toString());
     restoreStreams();
-    assertEquals(1, code);
-    assertTrue(errContent.toString().contains("at least 1 stage"));
+    assertEquals(0, code);
   }
 }

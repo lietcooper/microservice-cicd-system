@@ -103,7 +103,7 @@ public class ExecutionPlanner {
       }
 
       if (wave.isEmpty()) {
-        break; // cycle detected (should not happen with validated pipelines)
+        throw new IllegalStateException("cycle detected in dependencies for stage jobs: " + remaining.keySet());
       }
 
       // Remove processed jobs and decrement dependents
@@ -164,6 +164,10 @@ public class ExecutionPlanner {
           }
         }
       }
+    }
+
+    if (result.size() != stageJobs.size()) {
+       throw new IllegalStateException("cycle detected or missing dependency in stage jobs");
     }
 
     return result;

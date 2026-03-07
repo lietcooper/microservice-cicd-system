@@ -98,7 +98,7 @@ class PipelineExecutorServiceTest {
         .thenReturn(new JobResult("compile", 0, ""));
 
     PipelineRunEntity result = service.executePipeline(
-        pipeline, "/repo", "feature-x", null);
+        pipeline, "/repo", "feature-x", "abc");
 
     assertEquals("feature-x", result.getGitBranch());
   }

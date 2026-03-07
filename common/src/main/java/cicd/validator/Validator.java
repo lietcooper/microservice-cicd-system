@@ -25,12 +25,23 @@ public class Validator {
       return errors;
     }
 
+    if (!p.stagesExplicitlyDefined && p.stages.isEmpty()) {
+      p.stages = List.of("build", "test", "docs");
+    }
+
+    checkPipeline();
     checkStages();
     checkJobs();
     checkNeeds();
     checkCycles();
 
     return errors;
+  }
+
+  private void checkPipeline() {
+    if (p.name == null || p.name.isBlank()) {
+      errors.add(file + ":1:1: pipeline name is required");
+    }
   }
 
   private void checkStages() {
@@ -43,10 +54,9 @@ public class Validator {
     // rule 2: stage names unique
     Set<String> seen = new HashSet<>();
     for (String s : p.stages) {
-      if (seen.contains(s)) {
+      if (!seen.add(s)) {
         errors.add(file + ":1:1: duplicate stage name `" + s + "`");
       }
-      seen.add(s);
     }
 
     // rule 3: no empty stages
@@ -65,27 +75,32 @@ public class Validator {
   }
 
   private void checkJobs() {
-    // rule 4: job names unique
-    Set<String> seen = new HashSet<>();
-    for (String name : p.jobs.keySet()) {
-      if (seen.contains(name)) {
-        Job j = p.jobs.get(name);
-        errors.add(file + ":" + j.line + ":" + j.col + ": duplicate job name `" + name + "`");
-      }
-      seen.add(name);
-    }
-
-    // check job stage exists
+    // check job stage exists and mandatory fields
     for (Job j : p.jobs.values()) {
-      if (j.stage != null && !p.stages.contains(j.stage)) {
+      if (j.stage == null || j.stage.isBlank()) {
+        errors.add(file + ":" + j.line + ":" + j.col + ": job `" + j.name + "` missing stage");
+      } else if (!p.stages.contains(j.stage)) {
         errors.add(file + ":" + j.line + ":" + j.col + ": job `" + j.name
             + "` references undefined stage `" + j.stage + "`");
+      }
+
+      if (j.image == null || j.image.isBlank()) {
+        errors.add(file + ":" + j.line + ":" + j.col + ": job `" + j.name + "` missing image");
+      }
+
+      if (j.script == null || j.script.isEmpty()) {
+        errors.add(file + ":" + j.line + ":" + j.col + ": job `" + j.name + "` missing script");
       }
     }
   }
 
   private void checkNeeds() {
     for (Job j : p.jobs.values()) {
+      if (j.needsExplicitlyDefined && j.needs.isEmpty()) {
+        errors.add(file + ":" + j.needsLine + ":" + j.needsCol
+            + ": job `" + j.name + "` has an empty `needs` list. A needs has a non-empty list of job names.");
+      }
+
       // check for duplicate entries in needs
       Set<String> seen = new HashSet<>();
       for (String need : j.needs) {
@@ -96,6 +111,13 @@ public class Validator {
         if (!p.jobs.containsKey(need)) {
           errors.add(file + ":" + j.needsLine + ":" + j.needsCol
               + ": job `" + j.name + "` needs `" + need + "` which does not exist");
+        } else {
+          Job neededJob = p.jobs.get(need);
+          if (j.stage != null && !j.stage.equals(neededJob.stage)) {
+            errors.add(file + ":" + j.needsLine + ":" + j.needsCol
+                + ": job `" + j.name + "` needs `" + need + "` which is in a different stage `"
+                + neededJob.stage + "`. Needs must be in the same stage.");
+          }
         }
       }
     }
@@ -104,22 +126,26 @@ public class Validator {
 
   private void checkCycles() {
     // rule 6: no cycles in needs (per stage)
-    Map<String, List<String>> graph = new HashMap<>();
-    for (Job j : p.jobs.values()) {
-      graph.put(j.name, new ArrayList<>(j.needs));
-    }
+    for (String stage : p.stages) {
+      Map<String, List<String>> graph = new HashMap<>();
+      for (Job j : p.jobs.values()) {
+        if (stage.equals(j.stage)) {
+          graph.put(j.name, new ArrayList<>(j.needs));
+        }
+      }
 
-    for (String start : graph.keySet()) {
-      List<String> path = new ArrayList<>();
-      Set<String> visited = new HashSet<>();
-      if (hasCycle(start, graph, visited, path)) {
-        path.add(start);
-        Job j = p.jobs.get(start);
-        int line = j.needsLine > 0 ? j.needsLine : j.line;
-        int col = j.needsCol > 0 ? j.needsCol : j.col;
-        errors.add(file + ":" + line + ":" + col + ": cycle detected in `needs` requirements. "
-            + String.join(" -> ", path) + ".");
-        return; // report first cycle only
+      for (String start : graph.keySet()) {
+        List<String> path = new ArrayList<>();
+        Set<String> visited = new HashSet<>();
+        if (hasCycle(start, graph, visited, path)) {
+          path.add(start);
+          Job j = p.jobs.get(start);
+          int line = j.needsLine > 0 ? j.needsLine : j.line;
+          int col = j.needsCol > 0 ? j.needsCol : j.col;
+          errors.add(file + ":" + line + ":" + col + ": cycle detected in `needs` requirements for stage `"
+              + stage + "`. " + String.join(" -> ", path) + ".");
+          return; // report first cycle only
+        }
       }
     }
   }

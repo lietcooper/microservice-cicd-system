@@ -50,8 +50,8 @@ public class JobExecutionListener {
     JobResult result = dockerRunner.runJob(
         msg.getImage(), msg.getScripts(), msg.getRepoPath());
 
-    if (result.output != null && !result.output.isBlank()) {
-      result.output.lines().forEach(l -> System.out.println("    " + l));
+    if (result.output() != null && !result.output().isBlank()) {
+      result.output().lines().forEach(l -> System.out.println("    " + l));
     }
 
     // Update job status via MQ
@@ -71,8 +71,8 @@ public class JobExecutionListener {
     resultMsg.setStageName(msg.getStageName());
     resultMsg.setPipelineName(msg.getPipelineName());
     resultMsg.setSuccess(result.ok());
-    resultMsg.setExitCode(result.exitCode);
-    resultMsg.setOutput(result.output);
+    resultMsg.setExitCode(result.exitCode());
+    resultMsg.setOutput(result.output());
 
     rabbitTemplate.convertAndSend(
         RabbitMqConfig.JOB_RESULTS_EXCHANGE,

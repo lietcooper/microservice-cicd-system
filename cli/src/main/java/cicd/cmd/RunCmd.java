@@ -62,21 +62,31 @@ public class RunCmd implements Callable<Integer> {
 
         // Validate branch if specified
         if (branch != null) {
-            String cur = GitHelper.currentBranch(repoPath);
-            if (!branch.equals(cur)) {
-                System.err.println("error: requested branch '" + branch
-                    + "' but currently on '" + cur + "'");
+            try {
+                String cur = GitHelper.currentBranch(repoPath);
+                if (!branch.equals(cur)) {
+                    System.err.println("error: requested branch '" + branch
+                        + "' but currently on '" + cur + "'");
+                    return 1;
+                }
+            } catch (Exception e) {
+                System.err.println("error: failed to get current git branch: " + e.getMessage());
                 return 1;
             }
         }
 
         // Validate commit if specified
         if (commit != null) {
-            String full = GitHelper.currentCommitFull(repoPath);
-            String shortHash = GitHelper.currentCommit(repoPath);
-            if (!commit.equals(full) && !commit.equals(shortHash)) {
-                System.err.println("error: requested commit '" + commit
-                    + "' but HEAD is at '" + shortHash + "'");
+            try {
+                String full = GitHelper.currentCommitFull(repoPath);
+                String shortHash = GitHelper.currentCommit(repoPath);
+                if (!commit.equals(full) && !commit.equals(shortHash)) {
+                    System.err.println("error: requested commit '" + commit
+                        + "' but HEAD is at '" + shortHash + "'");
+                    return 1;
+                }
+            } catch (Exception e) {
+                System.err.println("error: failed to get git commit: " + e.getMessage());
                 return 1;
             }
         }
