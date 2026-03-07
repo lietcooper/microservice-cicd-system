@@ -101,6 +101,46 @@ Query reports:
 6. Worker sends status updates back to the server
 7. CLI uses `report` to inspect progress and results
 
+## Example Repositories
+
+After you push the local demo repos under `demo-repos/` to GitHub, set these two URLs:
+
+```bash
+export SUCCESS_REPO_URL="https://github.com/<org-or-user>/success-repo.git"
+export FAIL_REPO_URL="https://github.com/<org-or-user>/fail-repo.git"
+```
+
+## Evaluator Walkthrough
+
+Validation failure example:
+
+```bash
+./gradlew :cli:run --args="verify .pipelines/invalid-cycle.yaml"
+```
+
+Successful pipeline example:
+
+```bash
+./gradlew :cli:run --args="run --repo-url $SUCCESS_REPO_URL --name default --branch main"
+./gradlew :cli:run --args="report --pipeline default"
+./gradlew :cli:run --args="report --pipeline default --run 1"
+./gradlew :cli:run --args="report --pipeline default --run 1 --stage build"
+./gradlew :cli:run --args="report --pipeline default --run 1 --stage build --job compile"
+```
+
+Failed pipeline example:
+
+```bash
+./gradlew :cli:run --args="run --repo-url $FAIL_REPO_URL --name default --branch main"
+./gradlew :cli:run --args="report --pipeline default --run 2"
+./gradlew :cli:run --args="report --pipeline default --run 2 --stage test"
+./gradlew :cli:run --args="report --pipeline default --run 2 --stage test --job tests"
+```
+
+The local example repository sources are:
+- `demo-repos/success-repo`
+- `demo-repos/fail-repo`
+
 ## Test
 
 ```bash
