@@ -4,12 +4,27 @@ import cicd.executor.ExecutionPlanner;
 import cicd.executor.ExecutionPlanner.StageExecution;
 import cicd.model.Job;
 import cicd.model.Pipeline;
+import java.util.ArrayList;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import picocli.CommandLine;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class DryrunCmdTest {
+
+  @TempDir
+  Path tmp;
+
+  // ── formatDryrun (static, unit testable) ────────────────────────────────────
 
   @Test
   void singleStageAndJob() {
@@ -112,7 +127,8 @@ class DryrunCmdTest {
     statics.name = "statics";
     statics.stage = "test";
     statics.image = "gradle:jdk21";
-    statics.script = List.of("gradle checkstyleMain", "gradle checkstyleTest", "gradle spotbugsMain");
+    statics.script = List.of("gradle checkstyleMain", "gradle checkstyleTest",
+        "gradle spotbugsMain");
     p.jobs.put("statics", statics);
 
     ExecutionPlanner planner = new ExecutionPlanner(p);
@@ -228,4 +244,121 @@ class DryrunCmdTest {
     assertEquals(expected.stripIndent(), output);
   }
 
+  @Test
+  void emptyPlanProducesEmptyOutput() {
+    Pipeline p = new Pipeline();
+    p.name = "empty";
+    p.stages = new ArrayList<>();
+
+    ExecutionPlanner planner = new ExecutionPlanner(p);
+    List<StageExecution> plan = planner.computeOrder();
+    String output = DryrunCmd.formatDryrun(plan);
+
+    assertEquals("", output);
+  }
+
+  // ── CLI invocation tests ─────────────────────────────────────────────────────
+
+  @Test
+  void dryrunWithValidFile() throws IOException {
+    String yaml = """
+        pipeline:
+          name: dryruntest
+        stages:
+          - build
+        compile:
+          stage: build
+          image: alpine
+          script: echo build
+        """;
+    Path f = tmp.resolve("test.yaml");
+    Files.writeString(f, yaml);
+
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    ByteArrayOutputStream err = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(out));
+    System.setErr(new PrintStream(err));
+
+    int code = new CommandLine(new DryrunCmd()).execute(f.toString());
+
+    System.setOut(System.out);
+    System.setErr(System.err);
+
+    assertEquals(0, code);
+    String output = out.toString();
+    assertTrue(output.contains("build:"));
+    assertTrue(output.contains("compile:"));
+    assertTrue(output.contains("alpine"));
+  }
+
+  @Test
+  void dryrunWithInvalidFileReturnsExitCode1() throws IOException {
+    String yaml = """
+        pipeline:
+          name: bad
+        stages: []
+        """;
+    Path f = tmp.resolve("invalid.yaml");
+    Files.writeString(f, yaml);
+
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    ByteArrayOutputStream err = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(out));
+    System.setErr(new PrintStream(err));
+
+    int code = new CommandLine(new DryrunCmd()).execute(f.toString());
+
+    System.setOut(System.out);
+    System.setErr(System.err);
+
+    assertEquals(1, code);
+  }
+
+  @Test
+  void dryrunWithNonExistentFileReturnsExitCode1() {
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    ByteArrayOutputStream err = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(out));
+    System.setErr(new PrintStream(err));
+
+    int code = new CommandLine(new DryrunCmd()).execute(
+        tmp.resolve("nonexistent.yaml").toString());
+
+    System.setOut(System.out);
+    System.setErr(System.err);
+
+    assertEquals(1, code);
+    assertTrue(err.toString().contains("file not found"));
+  }
+
+  @Test
+  void dryrunOutputContainsImageAndScript() throws IOException {
+    String yaml = """
+        pipeline:
+          name: imgtest
+        stages:
+          - test
+        mytest:
+          stage: test
+          image: gradle:jdk21
+          script:
+            - ./gradlew test
+            - ./gradlew jacocoReport
+        """;
+    Path f = tmp.resolve("imgtest.yaml");
+    Files.writeString(f, yaml);
+
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(out));
+
+    int code = new CommandLine(new DryrunCmd()).execute(f.toString());
+
+    System.setOut(System.out);
+
+    assertEquals(0, code);
+    String output = out.toString();
+    assertTrue(output.contains("image: gradle:jdk21"));
+    assertTrue(output.contains("./gradlew test"));
+    assertTrue(output.contains("./gradlew jacocoReport"));
+  }
 }
