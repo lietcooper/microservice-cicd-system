@@ -27,11 +27,6 @@ public class VerifyCmd implements Callable<Integer> {
 
   @Override
   public Integer call() {
-    if (!new File(".git").isDirectory()) {
-      System.err.println("error: not in a git repository root directory");
-      return 1;
-    }
-
     if (!file.exists()) {
       System.err.println(file.getPath() + ":1:1: file not found");
       return 1;

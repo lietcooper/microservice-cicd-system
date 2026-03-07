@@ -18,16 +18,19 @@ import cicd.util.GitHelper;
 )
 public class RunCmd implements Callable<Integer> {
 
-    @Option(names = "--name", description = "Pipeline name to run")
+    @Option(names = "--name", description = "Pipeline name to find in repository")
     private String name;
 
-    @Option(names = "--file", description = "Path to pipeline YAML file")
+    @Option(names = "--file", description = "Path to local pipeline YAML file to execute")
     private String file;
 
-    @Option(names = "--branch", description = "Git branch (default: current)")
+    @Option(names = "--repo-url", description = "Repository URL (default: auto-detected from current directory)")
+    private String repoUrl;
+
+    @Option(names = "--branch", description = "Git branch (optional)")
     private String branch;
 
-    @Option(names = "--commit", description = "Git commit (default: HEAD)")
+    @Option(names = "--commit", description = "Git commit (optional)")
     private String commit;
 
     @Option(names = "--server", description = "Server URL", defaultValue = "http://localhost:8080")
@@ -42,12 +45,18 @@ public class RunCmd implements Callable<Integer> {
 
     @Override
     public Integer call() {
-        String repoPath = System.getProperty("user.dir");
+        String currentPath = System.getProperty("user.dir");
 
-        // Validate git repository
-        if (!GitHelper.isGitRoot(repoPath)) {
-            System.err.println("error: not in a git repository root directory");
-            return 1;
+        // Auto-detect repoUrl if not provided
+        if (repoUrl == null) {
+            if (GitHelper.isGitRoot(currentPath)) {
+                // For now, if we are in a git root, we can still use current path as local URL
+                // but in a real remote scenario, we might want to get remote origin URL
+                repoUrl = currentPath; 
+            } else {
+                System.err.println("error: --repo-url must be specified if not in a git repository root directory");
+                return 1;
+            }
         }
 
         // Validate options
@@ -60,42 +69,11 @@ public class RunCmd implements Callable<Integer> {
             return 1;
         }
 
-        // Validate branch if specified
-        if (branch != null) {
-            try {
-                String cur = GitHelper.currentBranch(repoPath);
-                if (!branch.equals(cur)) {
-                    System.err.println("error: requested branch '" + branch
-                        + "' but currently on '" + cur + "'");
-                    return 1;
-                }
-            } catch (Exception e) {
-                System.err.println("error: failed to get current git branch: " + e.getMessage());
-                return 1;
-            }
-        }
-
-        // Validate commit if specified
-        if (commit != null) {
-            try {
-                String full = GitHelper.currentCommitFull(repoPath);
-                String shortHash = GitHelper.currentCommit(repoPath);
-                if (!commit.equals(full) && !commit.equals(shortHash)) {
-                    System.err.println("error: requested commit '" + commit
-                        + "' but HEAD is at '" + shortHash + "'");
-                    return 1;
-                }
-            } catch (Exception e) {
-                System.err.println("error: failed to get git commit: " + e.getMessage());
-                return 1;
-            }
-        }
-
         try {
             // Build the request
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode requestBody = mapper.createObjectNode();
-            requestBody.put("repoPath", repoPath);
+            requestBody.put("repoUrl", repoUrl);
 
             if (branch != null) {
                 requestBody.put("branch", branch);
@@ -107,7 +85,7 @@ public class RunCmd implements Callable<Integer> {
             if (name != null) {
                 requestBody.put("pipelineName", name);
             } else {
-                // Read YAML file content
+                // Read YAML file content locally and upload
                 File yamlFile = new File(file);
                 if (!yamlFile.exists()) {
                     System.err.println("error: file not found: " + file);
