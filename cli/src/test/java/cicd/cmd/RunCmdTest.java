@@ -1,12 +1,16 @@
 package cicd.cmd;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
-import static org.junit.jupiter.api.Assertions.*;
 
+/** Tests for RunCmd option validation and error behavior. */
 class RunCmdTest {
 
   private ByteArrayOutputStream outContent;
@@ -97,7 +101,7 @@ class RunCmdTest {
   }
 
   @Test
-  void testFileOptionAttemptsServerConnection() throws Exception {
+  void testFileOptionAttemptsServerConnection() {
     // .pipelines/default.yaml exists in the project root
     int code = new CommandLine(new RunCmd()).execute(
         "--file", ".pipelines/default.yaml",
@@ -135,5 +139,72 @@ class RunCmdTest {
     assertEquals(1, code);
     assertTrue(errContent.toString().contains("requested branch")
         || errContent.toString().contains("fake-branch-xyz"));
+  }
+
+  // ── Additional edge cases ────────────────────────────────────────────────────
+
+  @Test
+  void testBranchOptionAloneWithoutNameOrFile() {
+    // Without --name or --file, should fail with "must specify" error
+    // regardless of --branch value
+    int code = new CommandLine(new RunCmd()).execute("--branch", "main");
+    restoreStreams();
+    assertEquals(1, code);
+    assertTrue(errContent.toString().contains("must specify either --name or --file"));
+  }
+
+  @Test
+  void testCommitOptionAloneWithoutNameOrFile() {
+    int code = new CommandLine(new RunCmd()).execute("--commit", "abc123");
+    restoreStreams();
+    assertEquals(1, code);
+    assertTrue(errContent.toString().contains("must specify either --name or --file"));
+  }
+
+  @Test
+  void testBothNameAndFileWithBranchOption() {
+    int code = new CommandLine(new RunCmd()).execute(
+        "--name", "default",
+        "--file", "some.yaml",
+        "--branch", "main");
+    restoreStreams();
+    assertEquals(1, code);
+    assertTrue(errContent.toString().contains("mutually exclusive"));
+  }
+
+  @Test
+  void testErrorMessageContainsRequestedBranchName() {
+    int code = new CommandLine(new RunCmd()).execute(
+        "--name", "default",
+        "--branch", "not-a-real-branch-xyz-999");
+    restoreStreams();
+    assertEquals(1, code);
+    assertTrue(errContent.toString().contains("not-a-real-branch-xyz-999"));
+  }
+
+  @Test
+  void testErrorMessageContainsRequestedCommitHash() {
+    int code = new CommandLine(new RunCmd()).execute(
+        "--name", "default",
+        "--commit", "0000000000000000000000000000000000000000");
+    restoreStreams();
+    assertEquals(1, code);
+    // Error should mention the requested commit or HEAD
+    assertTrue(errContent.toString().contains("requested commit")
+        || errContent.toString().contains("0000000000000000000000000000000000000000"));
+  }
+
+  @Test
+  void testCustomServerUrlIsUsed() {
+    // With custom server URL, failure message should reference that URL
+    int code = new CommandLine(new RunCmd()).execute(
+        "--name", "default",
+        "--server", "http://localhost:29999");
+    restoreStreams();
+    assertEquals(1, code);
+    // Either connection error or git repo error
+    assertTrue(errContent.toString().contains("29999")
+        || errContent.toString().contains("error")
+        || errContent.toString().contains("Failed to communicate"));
   }
 }

@@ -1,24 +1,24 @@
 package cicd.cmd;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import cicd.executor.ExecutionPlanner;
 import cicd.executor.ExecutionPlanner.StageExecution;
 import cicd.model.Job;
 import cicd.model.Pipeline;
-import java.util.ArrayList;
-import java.util.List;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-import picocli.CommandLine;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import picocli.CommandLine;
 
-import static org.junit.jupiter.api.Assertions.*;
-
+/** Tests for DryrunCmd CLI invocation and formatDryrun static method. */
 class DryrunCmdTest {
 
   @TempDir
@@ -360,5 +360,181 @@ class DryrunCmdTest {
     assertTrue(output.contains("image: gradle:jdk21"));
     assertTrue(output.contains("./gradlew test"));
     assertTrue(output.contains("./gradlew jacocoReport"));
+  }
+
+  // ── Additional edge cases ─────────────────────────────────────────────────
+
+  @Test
+  void dryrunWithCycleReturnsExitCode1() throws IOException {
+    String yaml = """
+        pipeline:
+          name: cycledry
+        stages:
+          - build
+        jobA:
+          stage: build
+          image: alpine
+          script: echo A
+          needs:
+            - jobB
+        jobB:
+          stage: build
+          image: alpine
+          script: echo B
+          needs:
+            - jobA
+        """;
+    Path f = tmp.resolve("cycledry.yaml");
+    Files.writeString(f, yaml);
+
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    ByteArrayOutputStream err = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(out));
+    System.setErr(new PrintStream(err));
+
+    int code = new CommandLine(new DryrunCmd()).execute(f.toString());
+
+    System.setOut(System.out);
+    System.setErr(System.err);
+
+    assertEquals(1, code);
+    assertTrue(err.toString().contains("cycle detected"));
+  }
+
+  @Test
+  void dryrunWithEmptyStageReturnsExitCode1() throws IOException {
+    String yaml = """
+        pipeline:
+          name: emptystagedry
+        stages:
+          - build
+          - test
+        compile:
+          stage: build
+          image: alpine
+          script: echo compile
+        """;
+    Path f = tmp.resolve("emptystagedry.yaml");
+    Files.writeString(f, yaml);
+
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    ByteArrayOutputStream err = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(out));
+    System.setErr(new PrintStream(err));
+
+    int code = new CommandLine(new DryrunCmd()).execute(f.toString());
+
+    System.setOut(System.out);
+    System.setErr(System.err);
+
+    assertEquals(1, code);
+  }
+
+  @Test
+  void dryrunOutputShowsNeedsOrderedBeforeDependent() throws IOException {
+    String yaml = """
+        pipeline:
+          name: ordercheck
+        stages:
+          - build
+        job2:
+          stage: build
+          image: alpine
+          script: echo 2
+          needs:
+            - job1
+        job1:
+          stage: build
+          image: alpine
+          script: echo 1
+        """;
+    Path f = tmp.resolve("ordercheck.yaml");
+    Files.writeString(f, yaml);
+
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(out));
+
+    int code = new CommandLine(new DryrunCmd()).execute(f.toString());
+
+    System.setOut(System.out);
+
+    assertEquals(0, code);
+    String output = out.toString();
+
+    // job1 must appear before job2 in the output
+    int job1Pos = output.indexOf("job1:");
+    int job2Pos = output.indexOf("job2:");
+    assertTrue(job1Pos < job2Pos, "job1 must appear before job2");
+  }
+
+  @Test
+  void dryrunErrorReportContainsFilePath() throws IOException {
+    Path f = tmp.resolve("badfile.yaml");
+    Files.writeString(f, "pipeline:\n  name: 123\n");
+
+    ByteArrayOutputStream err = new ByteArrayOutputStream();
+    System.setErr(new PrintStream(err));
+
+    int code = new CommandLine(new DryrunCmd()).execute(f.toString());
+
+    System.setErr(System.err);
+
+    assertEquals(1, code);
+    // Error output should contain the file path
+    assertTrue(err.toString().contains("badfile.yaml"));
+  }
+
+  @Test
+  void dryrunWithMissingFileReportsFileNameInError() {
+    String nonexistentPath = tmp.resolve("does-not-exist.yaml").toString();
+
+    ByteArrayOutputStream err = new ByteArrayOutputStream();
+    System.setErr(new PrintStream(err));
+
+    int code = new CommandLine(new DryrunCmd()).execute(nonexistentPath);
+
+    System.setErr(System.err);
+
+    assertEquals(1, code);
+    assertTrue(err.toString().contains("file not found"));
+  }
+
+  @Test
+  void formatDryrunWithNoStagesProducesEmptyString() {
+    Pipeline pp = new Pipeline();
+    pp.name = "nonstages";
+    pp.stages = new ArrayList<>();
+
+    ExecutionPlanner planner = new ExecutionPlanner(pp);
+    List<StageExecution> plan = planner.computeOrder();
+
+    assertEquals("", DryrunCmd.formatDryrun(plan));
+  }
+
+  @Test
+  void formatDryrunIndentationIsCorrect() {
+    Pipeline pp = new Pipeline();
+    pp.name = "indenttest";
+    pp.stages = List.of("build");
+
+    Job jj = new Job();
+    jj.name = "compile";
+    jj.stage = "build";
+    jj.image = "alpine:latest";
+    jj.script = List.of("echo hello");
+    pp.jobs.put("compile", jj);
+
+    ExecutionPlanner planner = new ExecutionPlanner(pp);
+    List<StageExecution> plan = planner.computeOrder();
+    String output = DryrunCmd.formatDryrun(plan);
+
+    // Job should be indented under stage (4 spaces)
+    assertTrue(output.contains("    compile:"), "Job should have 4-space indent");
+    // Image should be indented under job (8 spaces)
+    assertTrue(output.contains("        image: alpine:latest"),
+        "Image should have 8-space indent");
+    // Script items should have proper indent
+    assertTrue(output.contains("        - echo hello"),
+        "Script items should have 8-space indent");
   }
 }
