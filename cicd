@@ -1,2 +1,4 @@
 #!/bin/bash
-./gradlew -q :cli:run --args="$*" 2>&1 | grep -v -E "^(FAILURE|BUILD|\*|>|$)"
+docker run --rm --network host \
+  -v "$(pwd):/workspace" -w /workspace \
+  ghcr.io/cs7580-sea-sp26/d-team/cli:latest "$@"

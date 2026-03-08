@@ -20,6 +20,10 @@ dependencies {
     testRuntimeOnly 'com.h2database:h2:2.2.224'
 }
 
+jar {
+    enabled = false
+}
+
 bootRun {
     classpath += files(project(':common').sourceSets.main.output)
 }
