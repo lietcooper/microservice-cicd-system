@@ -25,7 +25,7 @@ docker compose version
 
 ## 2. Create a GitHub Access Token
 
-Because the repository is private, create a GitHub personal access token before downloading any evaluator files. A classic token with `repo` access is sufficient for downloading files from the private repository. If the container images are also private, the same token can be used for Docker login.
+Because the repository is private, create a GitHub personal access token before downloading any evaluator files. A classic token with `repo` access is sufficient for downloading files from the private repository. If the container images are also private, the same token can be used for Docker login. In that case, also enable `write:packages` so the token can be used with container registry authentication.
 
 Create the token at:
 - `https://github.com/settings/tokens`
