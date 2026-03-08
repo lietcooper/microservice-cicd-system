@@ -33,6 +33,34 @@ services:
       timeout: 5s
       retries: 5
 
+  server:
+    image: ghcr.io/cs7580-sea-sp26/d-team/server:latest
+    container_name: cicd-server
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cicd
+      SPRING_DATASOURCE_USERNAME: cicd
+      SPRING_DATASOURCE_PASSWORD: cicd
+      SPRING_RABBITMQ_HOST: rabbitmq
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  worker:
+    image: ghcr.io/cs7580-sea-sp26/d-team/worker:latest
+    container_name: cicd-worker
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/cicd-workspaces:/tmp/cicd-workspaces
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
 volumes:
   cicd-pgdata:
   cicd-rmqdata:

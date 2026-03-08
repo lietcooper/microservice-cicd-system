@@ -16,11 +16,13 @@ Custom CI/CD system with:
 
 ## Infrastructure
 
-Start PostgreSQL and RabbitMQ:
+Developer mode starts only PostgreSQL and RabbitMQ:
 
 ```bash
 docker compose up -d
 ```
+
+For evaluator / non-developer setup, use [sprint5-non-developer-guide.md](/Users/lijunwan/Documents/NEU/cs7580/assignments/d-team/sprint5-non-developer-guide.md) and `docker-compose.evaluator.yaml`.
 
 Run the server:
 

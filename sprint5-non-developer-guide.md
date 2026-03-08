@@ -1,11 +1,12 @@
 # Non-Developer Installation & Usage Guide
 
-This guide is for users running **Ubuntu 24.04** with only Git and Docker installed. No JVM, Python, or any language runtime is required.
+This guide is for evaluators using **Ubuntu 24.04**. The only software assumed to be pre-installed is **Git**. Docker will be installed during setup. No local JVM, Python, or any other language runtime is required because both the CLI and the system components run through Docker images.
 
 ## Prerequisites
 
 - Ubuntu 24.04
 - A user account with sudo privileges
+- Git
 
 ## 1. Install Docker
 
@@ -22,38 +23,31 @@ docker --version
 docker compose version
 ```
 
-## 2. Install Git (if not already installed)
+## 2. Create a GitHub Access Token
 
-```bash
-sudo apt-get update && sudo apt-get install -y git
-```
+Because the repository is private, create a GitHub personal access token before downloading any evaluator files. A classic token with `repo` access is sufficient for downloading files from the private repository. If the container images are also private, the same token can be used for Docker login.
 
-## 3. Log in to GitHub Container Registry
+Create the token at:
+- `https://github.com/settings/tokens`
 
-A GitHub personal access token with `read:packages` scope is required to pull the CI/CD system images.
+## 3. Download Evaluator Files
 
-To create one, go to https://github.com/settings/tokens and generate a **classic** token with the `read:packages` permission.
-
-```bash
-echo "<YOUR_GITHUB_TOKEN>" | docker login ghcr.io -u <YOUR_GITHUB_USERNAME> --password-stdin
-```
-
-## 4. Download System Files
-
-Create a working directory and download the two required files:
+Create a working directory and download the evaluator compose file and CLI launcher script. The `cicd` file is a small Docker-based launcher that runs the published CLI image:
 
 ```bash
 mkdir ~/cicd-system && cd ~/cicd-system
 
-curl -H "Authorization: token <YOUR_GITHUB_TOKEN>" \
-  -o docker-compose.yaml \
-  https://raw.githubusercontent.com/CS7580-SEA-SP26/d-team/main/docker-compose.yaml
-
-curl -H "Authorization: token <YOUR_GITHUB_TOKEN>" \
-  -o cicd \
-  https://raw.githubusercontent.com/CS7580-SEA-SP26/d-team/main/cicd
-
+curl -H "Authorization: token <YOUR_GITHUB_TOKEN>" -O https://raw.githubusercontent.com/CS7580-SEA-SP26/d-team/main/docker-compose.evaluator.yaml
+curl -H "Authorization: token <YOUR_GITHUB_TOKEN>" -O https://raw.githubusercontent.com/CS7580-SEA-SP26/d-team/main/cicd
 chmod +x cicd
+```
+
+## 4. Log In to GitHub Container Registry
+
+If the published images are private, log in before starting the system. This applies to the `server`, `worker`, and `cli` images. If the images are public, skip this step.
+
+```bash
+echo "<YOUR_GITHUB_TOKEN>" | docker login ghcr.io -u <YOUR_GITHUB_USERNAME> --password-stdin
 ```
 
 ## 5. Install the CLI to System PATH
@@ -64,123 +58,116 @@ This allows you to run `cicd` from any directory:
 sudo cp ~/cicd-system/cicd /usr/local/bin/cicd
 ```
 
-## 6. Start the System
-
-```bash
-cd ~/cicd-system
-docker compose up -d
-```
-
-Wait about 30 seconds for all services to initialize, then verify everything is running:
-
-```bash
-docker compose ps
-```
-
-You should see four services running: `cicd-postgres`, `cicd-rabbitmq`, `cicd-server`, and `cicd-worker`.
-
-If any service is not running, check its logs:
-
-```bash
-docker compose logs server
-docker compose logs worker
-```
-
-## 7. Usage Examples
-
-### 7.1 Clone the Example Repositories
-
-```bash
-# Repository with a passing pipeline
-git clone https://github.com/lietcooper/sucess-demo-repo.git ~/success-demo
-
-# Repository with a failing pipeline
-git clone https://github.com/lietcooper/fail-demo-repo.git ~/fail-demo
-```
-
-### 7.2 Verify a Pipeline Configuration
-
-The `verify` command checks whether a pipeline YAML file is valid.
-
-```bash
-# Verify a single file
-cd ~/success-demo
-cicd verify .pipelines/default.yaml
-
-# Verify all YAML files in a directory
-cicd verify .pipelines/
-```
-
-### 7.3 Dry Run a Pipeline
-
-The `dryrun` command validates the configuration and prints the execution order without actually running anything.
-
-```bash
-cd ~/success-demo
-cicd dryrun .pipelines/default.yaml
-```
-
-### 7.4 Run a Pipeline
-
-The `run` command submits a pipeline for execution on the server. The server clones the repository, parses the configuration, and executes all jobs in Docker containers.
-
-```bash
-# Run a successful pipeline
-cicd run --repo-url https://github.com/lietcooper/sucess-demo-repo.git --name default
-
-# Run a failing pipeline
-cicd run --repo-url https://github.com/lietcooper/fail-demo-repo.git --name default
-```
-
-After submitting, you will see a confirmation with the pipeline name and run number.
-
-### 7.5 View Reports
-
-The `report` command queries past pipeline execution results at four levels of detail.
-
-```bash
-# Level 1: All runs for a pipeline
-cicd report --pipeline default
-
-# Level 2: Details of a specific run
-cicd report --pipeline default --run 1
-
-# Level 3: Details of a specific stage in a run
-cicd report --pipeline default --run 1 --stage build
-
-# Level 4: Details of a specific job in a stage
-cicd report --pipeline default --run 1 --stage build --job compile
-```
-
-### 7.6 View CLI Help
+Verify the CLI launcher:
 
 ```bash
 cicd --help
-cicd verify --help
-cicd dryrun --help
-cicd run --help
-cicd report --help
 ```
 
-## 8. Stopping the System
+You can also run the launcher directly without installing it to PATH:
+
+```bash
+~/cicd-system/cicd --help
+```
+
+The launcher runs the CLI container with host networking so it can reach the local REST service on `localhost:8080`.
+
+## 6. Start the System Components
 
 ```bash
 cd ~/cicd-system
-docker compose down -v
+docker compose -f docker-compose.evaluator.yaml up -d
 ```
 
-This stops all containers and removes the data volumes. To stop without deleting data, omit `-v`:
+Wait about 30 seconds for all services to initialize.
+
+## 7. Verify System Health
+
+Check container status:
 
 ```bash
-docker compose down
+docker compose -f docker-compose.evaluator.yaml ps
 ```
 
-## 9. Troubleshooting
+You should see these four services running:
+- `cicd-postgres`
+- `cicd-rabbitmq`
+- `cicd-server`
+- `cicd-worker`
+
+Check server logs:
+
+```bash
+docker compose -f docker-compose.evaluator.yaml logs server
+```
+
+Check worker logs:
+
+```bash
+docker compose -f docker-compose.evaluator.yaml logs worker
+```
+
+Check RabbitMQ management UI if needed:
+- URL: `http://localhost:15672`
+- Username: `cicd`
+- Password: `cicd`
+
+## 8. Clone the Example Repositories
+
+```bash
+git clone https://github.com/lietcooper/success-demo-repo.git ~/success-demo
+git clone https://github.com/lietcooper/fail-demo-repo.git ~/fail-demo
+```
+
+## 9. Local Validation Examples
+
+```bash
+cd ~/success-demo
+cicd verify .pipelines/default.yaml
+cicd dryrun .pipelines/default.yaml
+cicd verify .pipelines/invalid-cycle.yaml
+```
+
+## 10. Successful Pipeline Run
+
+```bash
+cicd run --repo-url https://github.com/lietcooper/success-demo-repo.git --name default --branch main
+cicd report --pipeline default
+cicd report --pipeline default --run 1
+cicd report --pipeline default --run 1 --stage build
+cicd report --pipeline default --run 1 --stage build --job compile
+```
+
+## 11. Failed Pipeline Run
+
+```bash
+cicd run --repo-url https://github.com/lietcooper/fail-demo-repo.git --name default --branch main
+cicd report --pipeline default --run 2
+cicd report --pipeline default --run 2 --stage test
+cicd report --pipeline default --run 2 --stage test --job tests
+```
+
+## 12. Stop the System
+
+```bash
+cd ~/cicd-system
+docker compose -f docker-compose.evaluator.yaml down -v
+```
+
+To stop without deleting data:
+
+```bash
+docker compose -f docker-compose.evaluator.yaml down
+```
+
+## 13. Troubleshooting
 
 | Problem | Solution |
 |---------|----------|
 | `docker: permission denied` | Run `sudo usermod -aG docker $USER && newgrp docker` |
 | `cicd: command not found` | Run `sudo cp ~/cicd-system/cicd /usr/local/bin/cicd` |
-| Server/worker not starting | Check logs: `docker compose logs server` |
-| Cannot pull images | Verify GHCR login: `docker login ghcr.io` |
-| Port conflict on 8080/5432 | Stop conflicting services or edit ports in `docker-compose.yaml` |
+| CLI cannot connect to server | Verify `cicd-server` is running with `docker compose -f docker-compose.evaluator.yaml ps` |
+| Server or worker not starting | Check logs with `docker compose -f docker-compose.evaluator.yaml logs server` or `worker` |
+| Cannot pull images | If images are private, run `docker login ghcr.io` before using `cicd` or starting compose |
+| `cicd --help` fails immediately | Check Docker access, then verify the CLI image can be pulled from GHCR |
+| Port conflict on 8080/5432/15672 | Stop conflicting services or edit `docker-compose.evaluator.yaml` |

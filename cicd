@@ -1,4 +1,11 @@
-#!/bin/bash
-docker run --rm --network host \
-  -v "$(pwd):/workspace" -w /workspace \
-  ghcr.io/cs7580-sea-sp26/d-team/cli:latest "$@"
+#!/usr/bin/env sh
+set -eu
+
+IMAGE="${CICD_CLI_IMAGE:-ghcr.io/cs7580-sea-sp26/d-team/cli:latest}"
+WORKDIR="${PWD}"
+
+exec docker run --rm \
+  --network host \
+  -v "${WORKDIR}:/workspace" \
+  -w /workspace \
+  "${IMAGE}" "$@"
