@@ -1,0 +1,13 @@
+pipeline:
+  name: invalid-empty-stage
+  description: Defines an empty stage
+
+stages:
+  - build
+  - test
+
+compile:
+  stage: build
+  image: gradle:jdk21-corretto
+  script:
+    - gradle classes

@@ -27,5 +27,6 @@ run-server.sh
 *.log
 pipeline.log
 server.log
-!sprint5-developer-guide.md
+!sprint5-demo-walkthrough.md
 !sprint5-non-developer-guide.md
+!sprint5-developer-guide.md

@@ -1,0 +1,11 @@
+pipeline:
+  name: invalid-missing-image
+  description: Missing required image field
+
+stages:
+  - build
+
+compile:
+  stage: build
+  script:
+    - gradle classes

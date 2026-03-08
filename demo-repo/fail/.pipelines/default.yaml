@@ -1,0 +1,19 @@
+pipeline:
+  name: default
+  description: Failing demo pipeline
+
+stages:
+  - build
+  - test
+
+compile:
+  stage: build
+  image: gradle:jdk21-corretto
+  script:
+    - gradle clean classes
+
+tests:
+  stage: test
+  image: gradle:jdk21-corretto
+  script:
+    - gradle test

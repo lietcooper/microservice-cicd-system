@@ -30,6 +30,13 @@ Because the repository is private, create a GitHub personal access token before 
 Create the token at:
 - `https://github.com/settings/tokens`
 
+After creating the token, export it for the rest of the setup:
+
+```bash
+export GITHUB_TOKEN="<YOUR_GITHUB_TOKEN>"
+export GITHUB_USERNAME="<YOUR_GITHUB_USERNAME>"
+```
+
 ## 3. Download Evaluator Files
 
 Create a working directory and download the evaluator compose file and CLI launcher script. The `cicd` file is a small Docker-based launcher that runs the published CLI image:
@@ -37,8 +44,8 @@ Create a working directory and download the evaluator compose file and CLI launc
 ```bash
 mkdir ~/cicd-system && cd ~/cicd-system
 
-curl -H "Authorization: token <YOUR_GITHUB_TOKEN>" -O https://raw.githubusercontent.com/CS7580-SEA-SP26/d-team/main/docker-compose.evaluator.yaml
-curl -H "Authorization: token <YOUR_GITHUB_TOKEN>" -O https://raw.githubusercontent.com/CS7580-SEA-SP26/d-team/main/cicd
+curl -H "Authorization: token $GITHUB_TOKEN" -O https://raw.githubusercontent.com/CS7580-SEA-SP26/d-team/main/docker-compose.evaluator.yaml
+curl -H "Authorization: token $GITHUB_TOKEN" -O https://raw.githubusercontent.com/CS7580-SEA-SP26/d-team/main/cicd
 chmod +x cicd
 ```
 
@@ -47,7 +54,7 @@ chmod +x cicd
 If the published images are private, log in before starting the system. This applies to the `server`, `worker`, and `cli` images. If the images are public, skip this step.
 
 ```bash
-echo "<YOUR_GITHUB_TOKEN>" | docker login ghcr.io -u <YOUR_GITHUB_USERNAME> --password-stdin
+echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_USERNAME" --password-stdin
 ```
 
 ## 5. Install the CLI to System PATH
@@ -82,6 +89,16 @@ docker compose -f docker-compose.evaluator.yaml up -d
 Wait about 30 seconds for all services to initialize.
 
 ## 7. Verify System Health
+
+Use the full system verification checklist in [system-health-check.md](/Users/lijunwan/Documents/NEU/cs7580/assignments/d-team/system-health-check.md).
+
+Minimum evaluator checks:
+- `docker compose -f docker-compose.evaluator.yaml ps`
+- `cicd --help`
+- `docker compose -f docker-compose.evaluator.yaml logs server`
+- `docker compose -f docker-compose.evaluator.yaml logs worker`
+- one successful pipeline run
+- one failed pipeline run
 
 Check container status:
 
@@ -126,25 +143,32 @@ cd ~/success-demo
 cicd verify .pipelines/default.yaml
 cicd dryrun .pipelines/default.yaml
 cicd verify .pipelines/invalid-cycle.yaml
+cicd verify .pipelines/invalid-empty-stage.yaml
+cicd verify .pipelines/invalid-missing-image.yaml
+cicd verify .pipelines/invalid-undefined-stage.yaml
 ```
 
 ## 10. Successful Pipeline Run
 
+Run the pipeline first, then use the reported run number in the report commands.
+
 ```bash
 cicd run --repo-url https://github.com/lietcooper/success-demo-repo.git --name default --branch main
 cicd report --pipeline default
-cicd report --pipeline default --run 1
-cicd report --pipeline default --run 1 --stage build
-cicd report --pipeline default --run 1 --stage build --job compile
+cicd report --pipeline default --run <RUN_NO>
+cicd report --pipeline default --run <RUN_NO> --stage build
+cicd report --pipeline default --run <RUN_NO> --stage build --job compile
 ```
 
 ## 11. Failed Pipeline Run
 
+Run the failing pipeline, then use the reported run number in the report commands.
+
 ```bash
 cicd run --repo-url https://github.com/lietcooper/fail-demo-repo.git --name default --branch main
-cicd report --pipeline default --run 2
-cicd report --pipeline default --run 2 --stage test
-cicd report --pipeline default --run 2 --stage test --job tests
+cicd report --pipeline default --run <RUN_NO>
+cicd report --pipeline default --run <RUN_NO> --stage test
+cicd report --pipeline default --run <RUN_NO> --stage test --job tests
 ```
 
 ## 12. Stop the System

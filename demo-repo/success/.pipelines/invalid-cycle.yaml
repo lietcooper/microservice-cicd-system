@@ -1,0 +1,22 @@
+pipeline:
+  name: invalid-cycle
+  description: Contains a dependency cycle
+
+stages:
+  - test
+
+job-a:
+  stage: test
+  image: gradle:jdk21-corretto
+  needs:
+    - job-b
+  script:
+    - echo job-a
+
+job-b:
+  stage: test
+  image: gradle:jdk21-corretto
+  needs:
+    - job-a
+  script:
+    - echo job-b

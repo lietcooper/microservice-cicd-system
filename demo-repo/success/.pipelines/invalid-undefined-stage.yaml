@@ -1,0 +1,12 @@
+pipeline:
+  name: invalid-undefined-stage
+  description: References a stage that does not exist
+
+stages:
+  - build
+
+compile:
+  stage: test
+  image: gradle:jdk21-corretto
+  script:
+    - gradle classes
