@@ -664,7 +664,6 @@ class MessageEqualsHashCodeTest {
 
   @Test
   void jobResultMessage_subclassCanEqualReturnsFalse() {
-    JobResultMessage base = buildJobResult("c", "compile", "build", true, 0, "OK");
     JobResultMessage sub = new JobResultMessage() {
       @Override
       public boolean canEqual(Object other) {
@@ -675,13 +674,14 @@ class MessageEqualsHashCodeTest {
     sub.setJobName("compile");
     sub.setStageName("build");
     sub.setSuccess(true);
+    JobResultMessage base =
+        buildJobResult("c", "compile", "build", true, 0, "OK");
 
     assertNotEquals(base, sub);
   }
 
   @Test
   void jobExecuteMessage_subclassCanEqualReturnsFalse() {
-    JobExecuteMessage base = buildJobExecute("c", "build", "gradle:jdk21");
     JobExecuteMessage sub = new JobExecuteMessage() {
       @Override
       public boolean canEqual(Object other) {
@@ -691,13 +691,14 @@ class MessageEqualsHashCodeTest {
     sub.setCorrelationId("c");
     sub.setStageName("build");
     sub.setImage("gradle:jdk21");
+    JobExecuteMessage base =
+        buildJobExecute("c", "build", "gradle:jdk21");
 
     assertNotEquals(base, sub);
   }
 
   @Test
   void statusUpdateMessage_subclassCanEqualReturnsFalse() {
-    StatusUpdateMessage base = buildStatusUpdate("PIPELINE", 1L, "SUCCESS");
     StatusUpdateMessage sub = new StatusUpdateMessage() {
       @Override
       public boolean canEqual(Object other) {
@@ -707,6 +708,8 @@ class MessageEqualsHashCodeTest {
     sub.setEntityType("PIPELINE");
     sub.setPipelineRunId(1L);
     sub.setStatus("SUCCESS");
+    StatusUpdateMessage base =
+        buildStatusUpdate("PIPELINE", 1L, "SUCCESS");
 
     assertNotEquals(base, sub);
   }

@@ -1,6 +1,10 @@
 package cicd.listener;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import cicd.messaging.StatusUpdateMessage;
 import cicd.persistence.entity.JobRunEntity;
@@ -60,8 +64,6 @@ class StatusUpdateListenerTest {
     pipelineRunRepo.flush();
   }
 
-  // ── Pipeline entity updates ──────────────────────────────────────────────────
-
   @Test
   void handlePipelineUpdatesStatusToRunning() {
     StatusUpdateMessage msg = new StatusUpdateMessage();
@@ -120,7 +122,6 @@ class StatusUpdateListenerTest {
     msg.setPipelineRunId(99999L);
     msg.setStatus("RUNNING");
 
-    // Should not throw; just logs a warning
     assertDoesNotThrow(() -> listener.onStatusUpdate(msg));
   }
 
@@ -133,18 +134,15 @@ class StatusUpdateListenerTest {
     msg.setEntityType("PIPELINE");
     msg.setPipelineRunId(savedPipeline.getId());
     msg.setStatus("RUNNING");
-    msg.setStartTime(null); // null start time in message
+    msg.setStartTime(null);
 
     listener.onStatusUpdate(msg);
 
     Optional<PipelineRunEntity> found =
         pipelineRunRepo.findById(savedPipeline.getId());
     assertTrue(found.isPresent());
-    // startTime should still be null since message had null
     assertNull(found.get().getStartTime());
   }
-
-  // ── Stage entity creates/updates ─────────────────────────────────────────────
 
   @Test
   void handleStageCreatesNewStageRecord() {
@@ -168,7 +166,6 @@ class StatusUpdateListenerTest {
 
   @Test
   void handleStageUpdatesExistingStageRecord() {
-    // Create stage first
     StageRunEntity stage = new StageRunEntity();
     stage.setPipelineRun(savedPipeline);
     stage.setStageName("build");
@@ -178,7 +175,6 @@ class StatusUpdateListenerTest {
     stageRunRepo.save(stage);
     stageRunRepo.flush();
 
-    // Now update to SUCCESS
     StatusUpdateMessage msg = new StatusUpdateMessage();
     msg.setEntityType("STAGE");
     msg.setPipelineRunId(savedPipeline.getId());
@@ -213,7 +209,7 @@ class StatusUpdateListenerTest {
     msg.setEntityType("STAGE");
     msg.setPipelineRunId(savedPipeline.getId());
     msg.setStageName("test");
-    msg.setStageOrder(null); // null stage order
+    msg.setStageOrder(null);
     msg.setStatus("RUNNING");
     msg.setStartTime(OffsetDateTime.now());
 
@@ -223,14 +219,11 @@ class StatusUpdateListenerTest {
         stageRunRepo.findByPipelineRunIdAndStageName(
             savedPipeline.getId(), "test");
     assertTrue(found.isPresent());
-    assertEquals(0, found.get().getStageOrder()); // defaults to 0
+    assertEquals(0, found.get().getStageOrder());
   }
-
-  // ── Job entity creates/updates ───────────────────────────────────────────────
 
   @Test
   void handleJobCreatesNewJobRecord() {
-    // First create stage
     StageRunEntity stage = new StageRunEntity();
     stage.setPipelineRun(savedPipeline);
     stage.setStageName("build");
@@ -251,14 +244,14 @@ class StatusUpdateListenerTest {
     listener.onStatusUpdate(msg);
 
     Optional<JobRunEntity> found =
-        jobRunRepo.findByStageRunIdAndJobName(stage.getId(), "compile");
+        jobRunRepo.findByStageRunIdAndJobName(
+            stage.getId(), "compile");
     assertTrue(found.isPresent());
     assertEquals(RunStatus.PENDING, found.get().getStatus());
   }
 
   @Test
   void handleJobUpdatesExistingJobRecord() {
-    // Create stage and job
     StageRunEntity stage = new StageRunEntity();
     stage.setPipelineRun(savedPipeline);
     stage.setStageName("build");
@@ -276,7 +269,6 @@ class StatusUpdateListenerTest {
     jobRunRepo.save(job);
     jobRunRepo.flush();
 
-    // Update to SUCCESS
     StatusUpdateMessage msg = new StatusUpdateMessage();
     msg.setEntityType("JOB");
     msg.setPipelineRunId(savedPipeline.getId());
@@ -288,7 +280,8 @@ class StatusUpdateListenerTest {
     listener.onStatusUpdate(msg);
 
     Optional<JobRunEntity> found =
-        jobRunRepo.findByStageRunIdAndJobName(stage.getId(), "compile");
+        jobRunRepo.findByStageRunIdAndJobName(
+            stage.getId(), "compile");
     assertTrue(found.isPresent());
     assertEquals(RunStatus.SUCCESS, found.get().getStatus());
     assertNotNull(found.get().getEndTime());
@@ -305,8 +298,6 @@ class StatusUpdateListenerTest {
 
     assertDoesNotThrow(() -> listener.onStatusUpdate(msg));
   }
-
-  // ── Unknown entity type ──────────────────────────────────────────────────────
 
   @Test
   void handleUnknownEntityTypeDoesNotThrow() {

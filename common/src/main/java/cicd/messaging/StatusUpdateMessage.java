@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class StatusUpdateMessage {
 
-  /** "PIPELINE", "STAGE", or "JOB" */
+  /** Entity type: "PIPELINE", "STAGE", or "JOB". */
   private String entityType;
 
   private Long pipelineRunId;
@@ -31,7 +31,7 @@ public class StatusUpdateMessage {
   /** Null for pipeline/stage-level updates. */
   private String jobName;
 
-  /** "PENDING", "RUNNING", "SUCCESS", "FAILED" */
+  /** Status value: "PENDING", "RUNNING", "SUCCESS", "FAILED". */
   private String status;
 
   @JsonFormat(shape = JsonFormat.Shape.STRING,

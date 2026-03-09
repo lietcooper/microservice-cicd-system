@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/** Represents a CI/CD pipeline configuration. */
 public class Pipeline {
 
   public String name;

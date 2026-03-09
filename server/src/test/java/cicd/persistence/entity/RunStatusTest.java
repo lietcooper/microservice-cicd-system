@@ -1,14 +1,16 @@
 package cicd.persistence.entity;
 
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 class RunStatusTest {
 
   @Test
   void allValuesExist() {
-    // Verify all four status values are defined
     assertNotNull(RunStatus.PENDING);
     assertNotNull(RunStatus.RUNNING);
     assertNotNull(RunStatus.SUCCESS);
@@ -47,7 +49,6 @@ class RunStatusTest {
 
   @Test
   void getLabelIsDifferentFromName() {
-    // getLabel() returns lowercase, name() returns uppercase
     for (RunStatus status : RunStatus.values()) {
       assertEquals(status.name().toLowerCase(), status.getLabel());
       assertNotEquals(status.name(), status.getLabel());
@@ -56,7 +57,6 @@ class RunStatusTest {
 
   @Test
   void toStringReturnsSameName() {
-    // Default Enum.toString() returns name()
     assertEquals("SUCCESS", RunStatus.SUCCESS.toString());
     assertEquals("FAILED", RunStatus.FAILED.toString());
   }

@@ -1,14 +1,19 @@
 package cicd.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
 import cicd.messaging.StatusEventMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
 
 class StatusEventPublisherTest {
 
@@ -21,7 +26,7 @@ class StatusEventPublisherTest {
     publisher = new StatusEventPublisher(rabbitTemplate);
   }
 
-  // ── publishPipelineStarted ───────────────────────────────────────────────────
+  // ── publishPipelineStarted ─────────────────────────
 
   @Test
   void publishPipelineStartedSetsEventTypeAndStatus() {
@@ -29,7 +34,8 @@ class StatusEventPublisherTest {
 
     ArgumentCaptor<StatusEventMessage> captor =
         ArgumentCaptor.forClass(StatusEventMessage.class);
-    verify(rabbitTemplate).convertAndSend(anyString(), anyString(), captor.capture());
+    verify(rabbitTemplate).convertAndSend(
+        anyString(), anyString(), captor.capture());
 
     StatusEventMessage msg = captor.getValue();
     assertEquals("pipeline.started", msg.getEventType());
@@ -43,7 +49,7 @@ class StatusEventPublisherTest {
     assertEquals("Pipeline started", msg.getMessage());
   }
 
-  // ── publishPipelineCompleted ─────────────────────────────────────────────────
+  // ── publishPipelineCompleted ───────────────────────
 
   @Test
   void publishPipelineCompletedSuccessSetsSucessStatus() {
@@ -51,7 +57,8 @@ class StatusEventPublisherTest {
 
     ArgumentCaptor<StatusEventMessage> captor =
         ArgumentCaptor.forClass(StatusEventMessage.class);
-    verify(rabbitTemplate).convertAndSend(anyString(), anyString(), captor.capture());
+    verify(rabbitTemplate).convertAndSend(
+        anyString(), anyString(), captor.capture());
 
     StatusEventMessage msg = captor.getValue();
     assertEquals("pipeline.completed", msg.getEventType());
@@ -61,25 +68,30 @@ class StatusEventPublisherTest {
 
   @Test
   void publishPipelineCompletedFailureSetsFailedStatus() {
-    publisher.publishPipelineCompleted(2L, "pipe", 3, false);
+    publisher.publishPipelineCompleted(
+        2L, "pipe", 3, false);
 
     ArgumentCaptor<StatusEventMessage> captor =
         ArgumentCaptor.forClass(StatusEventMessage.class);
-    verify(rabbitTemplate).convertAndSend(anyString(), anyString(), captor.capture());
+    verify(rabbitTemplate).convertAndSend(
+        anyString(), anyString(), captor.capture());
 
     assertEquals("FAILED", captor.getValue().getStatus());
-    assertTrue(captor.getValue().getMessage().contains("failed"));
+    assertTrue(captor.getValue().getMessage()
+        .contains("failed"));
   }
 
-  // ── publishStageStarted ──────────────────────────────────────────────────────
+  // ── publishStageStarted ───────────────────────────
 
   @Test
   void publishStageStartedSetsStageNameAndStatus() {
-    publisher.publishStageStarted(1L, "pipe", 1, "build");
+    publisher.publishStageStarted(
+        1L, "pipe", 1, "build");
 
     ArgumentCaptor<StatusEventMessage> captor =
         ArgumentCaptor.forClass(StatusEventMessage.class);
-    verify(rabbitTemplate).convertAndSend(anyString(), anyString(), captor.capture());
+    verify(rabbitTemplate).convertAndSend(
+        anyString(), anyString(), captor.capture());
 
     StatusEventMessage msg = captor.getValue();
     assertEquals("stage.started", msg.getEventType());
@@ -89,40 +101,49 @@ class StatusEventPublisherTest {
     assertTrue(msg.getMessage().contains("build"));
   }
 
-  // ── publishStageCompleted ────────────────────────────────────────────────────
+  // ── publishStageCompleted ─────────────────────────
 
   @Test
   void publishStageCompletedSuccessSetsSuccessStatus() {
-    publisher.publishStageCompleted(1L, "pipe", 1, "build", true);
+    publisher.publishStageCompleted(
+        1L, "pipe", 1, "build", true);
 
     ArgumentCaptor<StatusEventMessage> captor =
         ArgumentCaptor.forClass(StatusEventMessage.class);
-    verify(rabbitTemplate).convertAndSend(anyString(), anyString(), captor.capture());
+    verify(rabbitTemplate).convertAndSend(
+        anyString(), anyString(), captor.capture());
 
-    assertEquals("stage.completed", captor.getValue().getEventType());
-    assertEquals("SUCCESS", captor.getValue().getStatus());
+    assertEquals("stage.completed",
+        captor.getValue().getEventType());
+    assertEquals("SUCCESS",
+        captor.getValue().getStatus());
   }
 
   @Test
   void publishStageCompletedFailureSetsFailedStatus() {
-    publisher.publishStageCompleted(1L, "pipe", 1, "test", false);
+    publisher.publishStageCompleted(
+        1L, "pipe", 1, "test", false);
 
     ArgumentCaptor<StatusEventMessage> captor =
         ArgumentCaptor.forClass(StatusEventMessage.class);
-    verify(rabbitTemplate).convertAndSend(anyString(), anyString(), captor.capture());
+    verify(rabbitTemplate).convertAndSend(
+        anyString(), anyString(), captor.capture());
 
-    assertEquals("FAILED", captor.getValue().getStatus());
+    assertEquals("FAILED",
+        captor.getValue().getStatus());
   }
 
-  // ── publishJobStarted ────────────────────────────────────────────────────────
+  // ── publishJobStarted ─────────────────────────────
 
   @Test
   void publishJobStartedSetsJobNameAndStageName() {
-    publisher.publishJobStarted(1L, "pipe", 1, "build", "compile");
+    publisher.publishJobStarted(
+        1L, "pipe", 1, "build", "compile");
 
     ArgumentCaptor<StatusEventMessage> captor =
         ArgumentCaptor.forClass(StatusEventMessage.class);
-    verify(rabbitTemplate).convertAndSend(anyString(), anyString(), captor.capture());
+    verify(rabbitTemplate).convertAndSend(
+        anyString(), anyString(), captor.capture());
 
     StatusEventMessage msg = captor.getValue();
     assertEquals("job.started", msg.getEventType());
@@ -132,45 +153,55 @@ class StatusEventPublisherTest {
     assertTrue(msg.getMessage().contains("compile"));
   }
 
-  // ── publishJobCompleted ──────────────────────────────────────────────────────
+  // ── publishJobCompleted ───────────────────────────
 
   @Test
   void publishJobCompletedSuccessSetsSuccessStatus() {
-    publisher.publishJobCompleted(1L, "pipe", 1, "build", "compile", true);
+    publisher.publishJobCompleted(
+        1L, "pipe", 1, "build", "compile", true);
 
     ArgumentCaptor<StatusEventMessage> captor =
         ArgumentCaptor.forClass(StatusEventMessage.class);
-    verify(rabbitTemplate).convertAndSend(anyString(), anyString(), captor.capture());
+    verify(rabbitTemplate).convertAndSend(
+        anyString(), anyString(), captor.capture());
 
-    assertEquals("job.completed", captor.getValue().getEventType());
-    assertEquals("SUCCESS", captor.getValue().getStatus());
+    assertEquals("job.completed",
+        captor.getValue().getEventType());
+    assertEquals("SUCCESS",
+        captor.getValue().getStatus());
   }
 
   @Test
   void publishJobCompletedFailureSetsFailedStatus() {
-    publisher.publishJobCompleted(1L, "pipe", 1, "build", "compile", false);
+    publisher.publishJobCompleted(
+        1L, "pipe", 1, "build", "compile", false);
 
     ArgumentCaptor<StatusEventMessage> captor =
         ArgumentCaptor.forClass(StatusEventMessage.class);
-    verify(rabbitTemplate).convertAndSend(anyString(), anyString(), captor.capture());
+    verify(rabbitTemplate).convertAndSend(
+        anyString(), anyString(), captor.capture());
 
-    assertEquals("FAILED", captor.getValue().getStatus());
+    assertEquals("FAILED",
+        captor.getValue().getStatus());
   }
 
-  // ── Timestamp always set ─────────────────────────────────────────────────────
+  // ── Timestamp always set ──────────────────────────
 
   @Test
   void allEventMessagesHaveTimestamp() {
     publisher.publishPipelineStarted(1L, "p", 1);
     publisher.publishStageStarted(1L, "p", 1, "build");
-    publisher.publishJobStarted(1L, "p", 1, "build", "job");
+    publisher.publishJobStarted(
+        1L, "p", 1, "build", "job");
 
     ArgumentCaptor<StatusEventMessage> captor =
         ArgumentCaptor.forClass(StatusEventMessage.class);
     verify(rabbitTemplate, times(3))
-        .convertAndSend(anyString(), anyString(), captor.capture());
+        .convertAndSend(anyString(), anyString(),
+            captor.capture());
 
     captor.getAllValues().forEach(msg ->
-        assertNotNull(msg.getTimestamp(), "Timestamp should always be set"));
+        assertNotNull(msg.getTimestamp(),
+            "Timestamp should always be set"));
   }
 }

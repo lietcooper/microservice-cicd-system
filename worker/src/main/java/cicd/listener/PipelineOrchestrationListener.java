@@ -34,6 +34,7 @@ public class PipelineOrchestrationListener {
   private final StatusUpdatePublisher statusPublisher;
   private final WorkspaceArchiveService workspaceArchiveService;
 
+  /** Creates the orchestrator with all required dependencies. */
   public PipelineOrchestrationListener(
       RabbitTemplate rabbitTemplate,
       StageCoordinatorService coordinator,
@@ -47,6 +48,7 @@ public class PipelineOrchestrationListener {
     this.workspaceArchiveService = workspaceArchiveService;
   }
 
+  /** Orchestrates a full pipeline run from message to completion. */
   @RabbitListener(queues = RabbitMqConfig.PIPELINE_EXECUTE_QUEUE,
       concurrency = "1")
   public void onPipelineExecute(PipelineExecuteMessage msg) {

@@ -66,8 +66,8 @@ class DtoEqualsHashCodeBranchTest {
 
   @Test
   void jobDto_equalsNameAndStatusMatchButStartTimeDiffers() {
-    OffsetDateTime ts1 = OffsetDateTime.parse("2025-01-01T10:00:00+00:00");
-    OffsetDateTime ts2 = OffsetDateTime.parse("2025-01-01T11:00:00+00:00");
+    final OffsetDateTime ts1 = OffsetDateTime.parse("2025-01-01T10:00:00+00:00");
+    final OffsetDateTime ts2 = OffsetDateTime.parse("2025-01-01T11:00:00+00:00");
 
     JobDto dto1 = new JobDto();
     dto1.setName("compile");
@@ -84,7 +84,7 @@ class DtoEqualsHashCodeBranchTest {
 
   @Test
   void jobDto_equalsFirstThreeMatchButEndTimeDiffers() {
-    OffsetDateTime ts = OffsetDateTime.parse("2025-01-01T10:00:00+00:00");
+    final OffsetDateTime ts = OffsetDateTime.parse("2025-01-01T10:00:00+00:00");
 
     JobDto dto1 = new JobDto();
     dto1.setName("compile");
@@ -105,7 +105,7 @@ class DtoEqualsHashCodeBranchTest {
 
   @Test
   void stageDto_hashCodeWithAllNonNullFields() {
-    OffsetDateTime ts = OffsetDateTime.parse("2025-01-01T10:00:00+00:00");
+    final OffsetDateTime ts = OffsetDateTime.parse("2025-01-01T10:00:00+00:00");
     JobDto job = new JobDto();
     job.setName("compile");
     job.setStatus("SUCCESS");
@@ -149,8 +149,8 @@ class DtoEqualsHashCodeBranchTest {
 
   @Test
   void stageDto_equalsNameStatusMatchButStartTimeDiffers() {
-    OffsetDateTime ts1 = OffsetDateTime.parse("2025-01-01T10:00:00+00:00");
-    OffsetDateTime ts2 = OffsetDateTime.parse("2025-01-01T11:00:00+00:00");
+    final OffsetDateTime ts1 = OffsetDateTime.parse("2025-01-01T10:00:00+00:00");
+    final OffsetDateTime ts2 = OffsetDateTime.parse("2025-01-01T11:00:00+00:00");
 
     StageDto dto1 = new StageDto();
     dto1.setName("build");
@@ -268,8 +268,8 @@ class DtoEqualsHashCodeBranchTest {
 
   @Test
   void runSummaryDto_equalsStartTimeDiffersWhenOtherFieldsMatch() {
-    OffsetDateTime ts1 = OffsetDateTime.parse("2025-01-01T10:00:00+00:00");
-    OffsetDateTime ts2 = OffsetDateTime.parse("2025-01-01T11:00:00+00:00");
+    final OffsetDateTime ts1 = OffsetDateTime.parse("2025-01-01T10:00:00+00:00");
+    final OffsetDateTime ts2 = OffsetDateTime.parse("2025-01-01T11:00:00+00:00");
 
     RunSummaryDto dto1 = new RunSummaryDto();
     dto1.setRunNo(1);
@@ -321,7 +321,7 @@ class DtoEqualsHashCodeBranchTest {
 
   @Test
   void pipelineRunDetailResponse_hashCodeWithAllNonNullFields() {
-    OffsetDateTime ts = OffsetDateTime.parse("2025-01-01T10:00:00+00:00");
+    final OffsetDateTime ts = OffsetDateTime.parse("2025-01-01T10:00:00+00:00");
     StageDto stage = new StageDto();
     stage.setName("build");
     stage.setStatus("SUCCESS");
@@ -407,8 +407,8 @@ class DtoEqualsHashCodeBranchTest {
 
   @Test
   void pipelineRunDetailResponse_equalsStartTimeDiffersWhenOtherFieldsMatch() {
-    OffsetDateTime ts1 = OffsetDateTime.parse("2025-01-01T10:00:00+00:00");
-    OffsetDateTime ts2 = OffsetDateTime.parse("2025-01-01T11:00:00+00:00");
+    final OffsetDateTime ts1 = OffsetDateTime.parse("2025-01-01T10:00:00+00:00");
+    final OffsetDateTime ts2 = OffsetDateTime.parse("2025-01-01T11:00:00+00:00");
 
     PipelineRunDetailResponse r1 = new PipelineRunDetailResponse();
     r1.setPipelineName("pipe");
@@ -433,7 +433,7 @@ class DtoEqualsHashCodeBranchTest {
 
   @Test
   void pipelineRunDetailResponse_equalsStagesDifferWhenOtherFieldsMatch() {
-    OffsetDateTime ts = OffsetDateTime.parse("2025-01-01T10:00:00+00:00");
+    final OffsetDateTime ts = OffsetDateTime.parse("2025-01-01T10:00:00+00:00");
     StageDto stage1 = new StageDto();
     stage1.setName("build");
 
@@ -797,8 +797,8 @@ class DtoEqualsHashCodeBranchTest {
 
   @Test
   void executePipelineResponse_equalsStartTimeDiffersWhenOtherFieldsMatch() {
-    OffsetDateTime ts1 = OffsetDateTime.parse("2025-01-01T10:00:00+00:00");
-    OffsetDateTime ts2 = OffsetDateTime.parse("2025-01-01T11:00:00+00:00");
+    final OffsetDateTime ts1 = OffsetDateTime.parse("2025-01-01T10:00:00+00:00");
+    final OffsetDateTime ts2 = OffsetDateTime.parse("2025-01-01T11:00:00+00:00");
 
     ExecutePipelineResponse r1 = new ExecutePipelineResponse();
     r1.setRunId(1L);

@@ -1,6 +1,10 @@
 package cicd.service;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import cicd.api.dto.PipelineRunDetailResponse;
 import cicd.api.dto.PipelineRunsResponse;
@@ -49,11 +53,10 @@ class ReportServiceTest {
   @Autowired
   private JobRunRepository jobRunRepo;
 
-  // ── Level 1: getAllRuns ───────────────────────────────────────────────────────
-
   @Test
   void getAllRunsReturnsEmptyWhenNoneExist() {
-    PipelineRunsResponse response = reportService.getAllRuns("nonexistent");
+    PipelineRunsResponse response =
+        reportService.getAllRuns("nonexistent");
     assertEquals("nonexistent", response.getPipelineName());
     assertNotNull(response.getRuns());
     assertTrue(response.getRuns().isEmpty());
@@ -66,7 +69,8 @@ class ReportServiceTest {
     savePipelineRun("ordered", 1, RunStatus.SUCCESS, now, now);
     savePipelineRun("ordered", 3, RunStatus.SUCCESS, now, now);
 
-    PipelineRunsResponse response = reportService.getAllRuns("ordered");
+    PipelineRunsResponse response =
+        reportService.getAllRuns("ordered");
     assertEquals("ordered", response.getPipelineName());
     assertEquals(3, response.getRuns().size());
     assertEquals(1, response.getRuns().get(0).getRunNo());
@@ -80,9 +84,12 @@ class ReportServiceTest {
     savePipelineRun("statuspipe", 1, RunStatus.SUCCESS, now, now);
     savePipelineRun("statuspipe", 2, RunStatus.FAILED, now, now);
 
-    PipelineRunsResponse response = reportService.getAllRuns("statuspipe");
-    assertEquals("SUCCESS", response.getRuns().get(0).getStatus());
-    assertEquals("FAILED", response.getRuns().get(1).getStatus());
+    PipelineRunsResponse response =
+        reportService.getAllRuns("statuspipe");
+    assertEquals("SUCCESS",
+        response.getRuns().get(0).getStatus());
+    assertEquals("FAILED",
+        response.getRuns().get(1).getStatus());
   }
 
   @Test
@@ -98,10 +105,13 @@ class ReportServiceTest {
     run.setEndTime(OffsetDateTime.now());
     pipelineRunRepo.save(run);
 
-    PipelineRunsResponse response = reportService.getAllRuns("gitpipe");
+    PipelineRunsResponse response =
+        reportService.getAllRuns("gitpipe");
     assertEquals(1, response.getRuns().size());
-    assertEquals("abc123", response.getRuns().get(0).getGitHash());
-    assertEquals("main", response.getRuns().get(0).getGitBranch());
+    assertEquals("abc123",
+        response.getRuns().get(0).getGitHash());
+    assertEquals("main",
+        response.getRuns().get(0).getGitBranch());
     assertEquals("git@example.com:org/repo.git",
         response.getRuns().get(0).getGitRepo());
   }
@@ -113,11 +123,10 @@ class ReportServiceTest {
     savePipelineRun("pipeB", 1, RunStatus.SUCCESS, now, now);
     savePipelineRun("pipeB", 2, RunStatus.SUCCESS, now, now);
 
-    PipelineRunsResponse response = reportService.getAllRuns("pipeA");
+    PipelineRunsResponse response =
+        reportService.getAllRuns("pipeA");
     assertEquals(1, response.getRuns().size());
   }
-
-  // ── Level 2: getRun ──────────────────────────────────────────────────────────
 
   @Test
   void getRunThrowsWhenNotFound() {
@@ -127,11 +136,12 @@ class ReportServiceTest {
 
   @Test
   void getRunReturnsRunWithStages() {
-    PipelineRunEntity run = buildRunWithStagesAndJobs("multi", 1,
-        RunStatus.SUCCESS);
+    PipelineRunEntity run = buildRunWithStagesAndJobs(
+        "multi", 1, RunStatus.SUCCESS);
     pipelineRunRepo.save(run);
 
-    PipelineRunDetailResponse response = reportService.getRun("multi", 1);
+    PipelineRunDetailResponse response =
+        reportService.getRun("multi", 1);
 
     assertEquals("multi", response.getPipelineName());
     assertEquals(1, response.getRunNo());
@@ -142,14 +152,15 @@ class ReportServiceTest {
 
   @Test
   void getRunStagesDontIncludeJobs() {
-    PipelineRunEntity run = buildRunWithStagesAndJobs("nojobs", 1,
-        RunStatus.SUCCESS);
+    PipelineRunEntity run = buildRunWithStagesAndJobs(
+        "nojobs", 1, RunStatus.SUCCESS);
     pipelineRunRepo.save(run);
 
-    PipelineRunDetailResponse response = reportService.getRun("nojobs", 1);
+    PipelineRunDetailResponse response =
+        reportService.getRun("nojobs", 1);
 
-    // Level 2: stages should not have jobs
-    response.getStages().forEach(s -> assertNull(s.getJobs()));
+    response.getStages().forEach(
+        ss -> assertNull(ss.getJobs()));
   }
 
   @Test
@@ -164,13 +175,13 @@ class ReportServiceTest {
     run.setStartTime(OffsetDateTime.now());
     pipelineRunRepo.save(run);
 
-    PipelineRunDetailResponse response = reportService.getRun("gitrun", 1);
+    PipelineRunDetailResponse response =
+        reportService.getRun("gitrun", 1);
     assertEquals("deadbeef", response.getGitHash());
     assertEquals("feature-x", response.getGitBranch());
-    assertEquals("https://github.com/org/repo", response.getGitRepo());
+    assertEquals("https://github.com/org/repo",
+        response.getGitRepo());
   }
-
-  // ── Level 3: getStage ────────────────────────────────────────────────────────
 
   @Test
   void getStageThrowsWhenRunNotFound() {
@@ -184,43 +195,47 @@ class ReportServiceTest {
     savePipelineRun("hasrun", 1, RunStatus.SUCCESS, now, now);
 
     assertThrows(ResourceNotFoundException.class,
-        () -> reportService.getStage("hasrun", 1, "nosuchstage"));
+        () -> reportService.getStage(
+            "hasrun", 1, "nosuchstage"));
   }
 
   @Test
   void getStageReturnsStageWithJobs() {
-    PipelineRunEntity run = buildRunWithStagesAndJobs("stagelevel", 1,
-        RunStatus.SUCCESS);
+    PipelineRunEntity run = buildRunWithStagesAndJobs(
+        "stagelevel", 1, RunStatus.SUCCESS);
     pipelineRunRepo.save(run);
 
     PipelineRunDetailResponse response =
         reportService.getStage("stagelevel", 1, "build");
 
     assertEquals(1, response.getStages().size());
-    assertEquals("build", response.getStages().get(0).getName());
+    assertEquals("build",
+        response.getStages().get(0).getName());
     assertNotNull(response.getStages().get(0).getJobs());
-    assertEquals(1, response.getStages().get(0).getJobs().size());
-    assertEquals("compile", response.getStages().get(0).getJobs().get(0).getName());
+    assertEquals(1,
+        response.getStages().get(0).getJobs().size());
+    assertEquals("compile",
+        response.getStages().get(0).getJobs().get(0).getName());
   }
 
   @Test
   void getStageMapsStatusCorrectly() {
-    PipelineRunEntity run = buildRunWithStagesAndJobs("stagestat", 1,
-        RunStatus.FAILED);
+    PipelineRunEntity run = buildRunWithStagesAndJobs(
+        "stagestat", 1, RunStatus.FAILED);
     pipelineRunRepo.save(run);
 
     PipelineRunDetailResponse response =
         reportService.getStage("stagestat", 1, "test");
 
-    assertEquals("FAILED", response.getStages().get(0).getStatus());
+    assertEquals("FAILED",
+        response.getStages().get(0).getStatus());
   }
-
-  // ── Level 4: getJob ──────────────────────────────────────────────────────────
 
   @Test
   void getJobThrowsWhenRunNotFound() {
     assertThrows(ResourceNotFoundException.class,
-        () -> reportService.getJob("ghost", 99, "build", "compile"));
+        () -> reportService.getJob(
+            "ghost", 99, "build", "compile"));
   }
 
   @Test
@@ -229,32 +244,37 @@ class ReportServiceTest {
     savePipelineRun("hasjobrun", 1, RunStatus.SUCCESS, now, now);
 
     assertThrows(ResourceNotFoundException.class,
-        () -> reportService.getJob("hasjobrun", 1, "nosuchstage", "compile"));
+        () -> reportService.getJob(
+            "hasjobrun", 1, "nosuchstage", "compile"));
   }
 
   @Test
   void getJobThrowsWhenJobNotFound() {
-    PipelineRunEntity run = buildRunWithStagesAndJobs("hasjob", 1,
-        RunStatus.SUCCESS);
+    PipelineRunEntity run = buildRunWithStagesAndJobs(
+        "hasjob", 1, RunStatus.SUCCESS);
     pipelineRunRepo.save(run);
 
     assertThrows(ResourceNotFoundException.class,
-        () -> reportService.getJob("hasjob", 1, "build", "nosuchjob"));
+        () -> reportService.getJob(
+            "hasjob", 1, "build", "nosuchjob"));
   }
 
   @Test
   void getJobReturnsCorrectJob() {
-    PipelineRunEntity run = buildRunWithStagesAndJobs("joblevel", 1,
-        RunStatus.SUCCESS);
+    PipelineRunEntity run = buildRunWithStagesAndJobs(
+        "joblevel", 1, RunStatus.SUCCESS);
     pipelineRunRepo.save(run);
 
     PipelineRunDetailResponse response =
         reportService.getJob("joblevel", 1, "build", "compile");
 
     assertEquals(1, response.getStages().size());
-    assertEquals("build", response.getStages().get(0).getName());
-    assertEquals(1, response.getStages().get(0).getJobs().size());
-    assertEquals("compile", response.getStages().get(0).getJobs().get(0).getName());
+    assertEquals("build",
+        response.getStages().get(0).getName());
+    assertEquals(1,
+        response.getStages().get(0).getJobs().size());
+    assertEquals("compile",
+        response.getStages().get(0).getJobs().get(0).getName());
   }
 
   @Test
@@ -290,18 +310,16 @@ class ReportServiceTest {
 
     pipelineRunRepo.save(run);
 
-    // Asking for "lint" should return only lint
     PipelineRunDetailResponse response =
         reportService.getJob("multijob", 1, "build", "lint");
 
-    assertEquals(1, response.getStages().get(0).getJobs().size());
+    assertEquals(1,
+        response.getStages().get(0).getJobs().size());
     assertEquals("lint",
         response.getStages().get(0).getJobs().get(0).getName());
     assertEquals("FAILED",
         response.getStages().get(0).getJobs().get(0).getStatus());
   }
-
-  // ── Helpers ──────────────────────────────────────────────────────────────────
 
   private PipelineRunEntity savePipelineRun(String name, int runNo,
       RunStatus status, OffsetDateTime start, OffsetDateTime end) {
@@ -314,11 +332,6 @@ class ReportServiceTest {
     return pipelineRunRepo.save(run);
   }
 
-  /**
-   * Builds a pipeline run with two stages ("build" with job "compile",
-   * "test" with job "unittest"). Status param applies to the pipeline and
-   * the "test" stage; "build" stage is always SUCCESS.
-   */
   private PipelineRunEntity buildRunWithStagesAndJobs(
       String name, int runNo, RunStatus overallStatus) {
     PipelineRunEntity run = new PipelineRunEntity();

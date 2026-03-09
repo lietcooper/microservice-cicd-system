@@ -1,17 +1,17 @@
 package cicd.cmd;
 
-
-import cicd.parser.YamlParser;
 import cicd.model.Pipeline;
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Parameters;
+import cicd.parser.YamlParser;
+import cicd.validator.Validator;
 import java.io.File;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import cicd.validator.Validator;
-import java.util.List;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Parameters;
 
+/** Validates pipeline YAML configuration files. */
 @Command(
     name = "verify",
     description = "Validate a pipeline YAML configuration file"
@@ -39,8 +39,10 @@ public class VerifyCmd implements Callable<Integer> {
     return verifyFile(file);
   }
 
+  /** Verifies all YAML files in a directory. */
   private int verifyDir(File dir) {
-    File[] yamls = dir.listFiles((d, n) -> n.endsWith(".yaml") || n.endsWith(".yml"));
+    File[] yamls = dir.listFiles(
+        (dd, nn) -> nn.endsWith(".yaml") || nn.endsWith(".yml"));
     if (yamls == null || yamls.length == 0) {
       System.err.println("No YAML files found in " + dir.getPath());
       return 1;
@@ -49,22 +51,22 @@ public class VerifyCmd implements Callable<Integer> {
     boolean hasError = false;
     Map<String, String> nameToFile = new HashMap<>();
 
-    for (File f : yamls) {
-      if (verifyFile(f) != 0) {
+    for (File ff : yamls) {
+      if (verifyFile(ff) != 0) {
         hasError = true;
         continue;
       }
 
-      YamlParser parser = new YamlParser(f.getPath());
-      Pipeline p = parser.parse();
-      if (p != null && p.name != null) {
-        String name = p.name;
-        if (nameToFile.containsKey(name)) {
-          System.err.println(f.getPath() + ": pipeline name `" + name
-              + "` already defined in " + nameToFile.get(name));
+      YamlParser parser = new YamlParser(ff.getPath());
+      Pipeline pp = parser.parse();
+      if (pp != null && pp.name != null) {
+        String pname = pp.name;
+        if (nameToFile.containsKey(pname)) {
+          System.err.println(ff.getPath() + ": pipeline name `" + pname
+              + "` already defined in " + nameToFile.get(pname));
           hasError = true;
         } else {
-          nameToFile.put(name, f.getPath());
+          nameToFile.put(pname, ff.getPath());
         }
       }
     }
@@ -72,9 +74,10 @@ public class VerifyCmd implements Callable<Integer> {
     return hasError ? 1 : 0;
   }
 
-  private int verifyFile(File f) {
-    YamlParser parser = new YamlParser(f.getPath());
-    Pipeline p = parser.parse();
+  /** Verifies a single YAML file. */
+  private int verifyFile(File ff) {
+    YamlParser parser = new YamlParser(ff.getPath());
+    Pipeline pp = parser.parse();
 
     if (!parser.getErrors().isEmpty()) {
       for (String err : parser.getErrors()) {
@@ -83,18 +86,18 @@ public class VerifyCmd implements Callable<Integer> {
       return 1;
     }
 
-    if (p != null) {
-      Validator v = new Validator(f.getPath(), p);
-      List<String> vErrors = v.validate();
-      if (!vErrors.isEmpty()) {
-        for (String err : vErrors) {
+    if (pp != null) {
+      Validator vv = new Validator(ff.getPath(), pp);
+      List<String> errs = vv.validate();
+      if (!errs.isEmpty()) {
+        for (String err : errs) {
           System.err.println(err);
         }
         return 1;
       }
     }
 
-    System.out.println(f.getPath() + ": Valid!");
+    System.out.println(ff.getPath() + ": Valid!");
     return 0;
   }
 }

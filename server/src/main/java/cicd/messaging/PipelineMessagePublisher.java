@@ -1,7 +1,6 @@
 package cicd.messaging;
 
 import cicd.config.RabbitMqConfig;
-import cicd.messaging.PipelineExecuteMessage;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
@@ -13,6 +12,7 @@ public class PipelineMessagePublisher {
 
   private final RabbitTemplate rabbitTemplate;
 
+  /** Creates a publisher with the given template. */
   public PipelineMessagePublisher(RabbitTemplate rabbitTemplate) {
     this.rabbitTemplate = rabbitTemplate;
   }
