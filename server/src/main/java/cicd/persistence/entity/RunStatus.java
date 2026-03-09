@@ -1,6 +1,7 @@
 package cicd.persistence.entity;
 
 public enum RunStatus {
+  PENDING,
   RUNNING,
   SUCCESS,
   FAILED;

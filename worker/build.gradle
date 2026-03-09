@@ -1,0 +1,28 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.4.2'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+dependencies {
+    implementation project(':common')
+
+    implementation 'org.springframework.boot:spring-boot-starter-amqp:3.4.2'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.16.1'
+
+    implementation 'com.github.docker-java:docker-java-core:3.3.6'
+    implementation 'com.github.docker-java:docker-java-transport-zerodep:3.3.6'
+
+    compileOnly 'org.projectlombok:lombok:1.18.30'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test:3.4.2'
+}
+
+jar {
+    enabled = false
+}
+
+bootRun {
+    classpath += files(project(':common').sourceSets.main.output)
+}

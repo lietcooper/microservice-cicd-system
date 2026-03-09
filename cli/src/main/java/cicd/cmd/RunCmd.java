@@ -18,16 +18,19 @@ import cicd.util.GitHelper;
 )
 public class RunCmd implements Callable<Integer> {
 
-    @Option(names = "--name", description = "Pipeline name to run")
+    @Option(names = "--name", description = "Pipeline name to find in repository")
     private String name;
 
-    @Option(names = "--file", description = "Path to pipeline YAML file")
+    @Option(names = "--file", description = "Path to local pipeline YAML file to execute")
     private String file;
 
-    @Option(names = "--branch", description = "Git branch (default: current)")
+    @Option(names = "--repo-url", description = "Repository URL (default: auto-detected from current directory)")
+    private String repoUrl;
+
+    @Option(names = "--branch", description = "Git branch (optional)")
     private String branch;
 
-    @Option(names = "--commit", description = "Git commit (default: HEAD)")
+    @Option(names = "--commit", description = "Git commit (optional)")
     private String commit;
 
     @Option(names = "--server", description = "Server URL", defaultValue = "http://localhost:8080")
@@ -36,19 +39,13 @@ public class RunCmd implements Callable<Integer> {
     private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
     private static final OkHttpClient client = new OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(600, TimeUnit.SECONDS) // 10 minutes for long-running pipelines
+            .readTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
             .build();
 
-    @Override
-    public Integer call() {
-        String repoPath = System.getProperty("user.dir");
-
-        // Validate git repository
-        if (!GitHelper.isGitRoot(repoPath)) {
-            System.err.println("error: not in a git repository root directory");
-            return 1;
-        }
+  @Override
+  public Integer call() {
+        String currentPath = System.getProperty("user.dir");
 
         // Validate options
         if (name == null && file == null) {
@@ -60,23 +57,10 @@ public class RunCmd implements Callable<Integer> {
             return 1;
         }
 
-        // Validate branch if specified
-        if (branch != null) {
-            String cur = GitHelper.currentBranch(repoPath);
-            if (!branch.equals(cur)) {
-                System.err.println("error: requested branch '" + branch
-                    + "' but currently on '" + cur + "'");
-                return 1;
-            }
-        }
-
-        // Validate commit if specified
-        if (commit != null) {
-            String full = GitHelper.currentCommitFull(repoPath);
-            String shortHash = GitHelper.currentCommit(repoPath);
-            if (!commit.equals(full) && !commit.equals(shortHash)) {
-                System.err.println("error: requested commit '" + commit
-                    + "' but HEAD is at '" + shortHash + "'");
+        if (repoUrl == null) {
+            repoUrl = detectRepoUrl(currentPath);
+            if (repoUrl == null || repoUrl.isBlank()) {
+                System.err.println("error: --repo-url is required or the current git repository must have an origin remote");
                 return 1;
             }
         }
@@ -85,7 +69,7 @@ public class RunCmd implements Callable<Integer> {
             // Build the request
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode requestBody = mapper.createObjectNode();
-            requestBody.put("repoPath", repoPath);
+            requestBody.put("repoUrl", repoUrl);
 
             if (branch != null) {
                 requestBody.put("branch", branch);
@@ -97,7 +81,7 @@ public class RunCmd implements Callable<Integer> {
             if (name != null) {
                 requestBody.put("pipelineName", name);
             } else {
-                // Read YAML file content
+                // Read YAML file content locally and upload
                 File yamlFile = new File(file);
                 if (!yamlFile.exists()) {
                     System.err.println("error: file not found: " + file);
@@ -118,8 +102,22 @@ public class RunCmd implements Callable<Integer> {
             try (Response response = client.newCall(request).execute()) {
                 String responseBody = response.body().string();
 
-                if (response.isSuccessful()) {
-                    // Parse and display the response
+                if (response.code() == 202) {
+                    // Async: pipeline queued for execution
+                    ObjectNode responseJson = (ObjectNode) mapper.readTree(responseBody);
+                    String pipelineName = responseJson.get("pipelineName").asText();
+                    int runNo = responseJson.get("runNo").asInt();
+
+                    System.out.println("\nPipeline execution queued.");
+                    System.out.println("  Pipeline: " + pipelineName);
+                    System.out.println("  Run #: " + runNo);
+                    System.out.println("  Status: PENDING");
+                    System.out.println("\nCheck progress with:");
+                    System.out.println("  cicd report --pipeline "
+                        + pipelineName + " --run " + runNo);
+                    return 0;
+                } else if (response.isSuccessful()) {
+                    // Synchronous: pipeline completed (legacy support)
                     ObjectNode responseJson = (ObjectNode) mapper.readTree(responseBody);
 
                     System.out.println("\n=== Pipeline Execution Result ===");
@@ -133,7 +131,6 @@ public class RunCmd implements Callable<Integer> {
                         System.out.println("Message: " + responseJson.get("message").asText());
                     }
 
-                    // Return 0 for success, 1 for failed pipeline
                     String status = responseJson.get("status").asText();
                     return "SUCCESS".equals(status) ? 0 : 1;
                 } else {
@@ -146,6 +143,17 @@ public class RunCmd implements Callable<Integer> {
             System.err.println("Failed to communicate with server: " + e.getMessage());
             System.err.println("Make sure the server is running at " + serverUrl);
             return 1;
+        }
+    }
+
+    private String detectRepoUrl(String currentPath) {
+        if (!GitHelper.isGitRoot(currentPath)) {
+            return null;
+        }
+        try {
+            return GitHelper.remoteOriginUrl(currentPath);
+        } catch (RuntimeException e) {
+            return null;
         }
     }
 }

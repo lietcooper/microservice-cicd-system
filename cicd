@@ -1,2 +1,11 @@
-#!/bin/bash
-./gradlew -q :cli:run --args="$*" 2>&1 | grep -v -E "^(FAILURE|BUILD|\*|>|$)"
+#!/usr/bin/env sh
+set -eu
+
+IMAGE="${CICD_CLI_IMAGE:-ghcr.io/cs7580-sea-sp26/d-team/cli:latest}"
+WORKDIR="${PWD}"
+
+exec docker run --rm \
+  --network host \
+  -v "${WORKDIR}:/workspace" \
+  -w /workspace \
+  "${IMAGE}" "$@"

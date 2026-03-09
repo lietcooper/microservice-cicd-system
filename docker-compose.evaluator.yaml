@@ -1,0 +1,66 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cicd-postgres
+    environment:
+      POSTGRES_DB: cicd
+      POSTGRES_USER: cicd
+      POSTGRES_PASSWORD: cicd
+    ports:
+      - "5432:5432"
+    volumes:
+      - cicd-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cicd"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: cicd-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: cicd
+      RABBITMQ_DEFAULT_PASS: cicd
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - cicd-rmqdata:/var/lib/rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  server:
+    image: ghcr.io/cs7580-sea-sp26/d-team/server:latest
+    container_name: cicd-server
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cicd
+      SPRING_DATASOURCE_USERNAME: cicd
+      SPRING_DATASOURCE_PASSWORD: cicd
+      SPRING_RABBITMQ_HOST: rabbitmq
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  worker:
+    image: ghcr.io/cs7580-sea-sp26/d-team/worker:latest
+    container_name: cicd-worker
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/cicd-workspaces:/tmp/cicd-workspaces
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+volumes:
+  cicd-pgdata:
+  cicd-rmqdata:

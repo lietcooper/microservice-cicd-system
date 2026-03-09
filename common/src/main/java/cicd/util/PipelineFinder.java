@@ -19,13 +19,24 @@ public class PipelineFinder {
       return FindResult.err("no YAML files found in .pipelines/");
     }
 
+    Pipeline result = null;
+    String filePath = null;
+
     for (File f : files) {
       YamlParser parser = new YamlParser(f.getPath());
       Pipeline p = parser.parse();
       if (parser.getErrors().isEmpty() && p != null
           && name.equals(p.name)) {
-        return FindResult.ok(p, f.getPath());
+        if (result != null) {
+          return FindResult.err("multiple pipelines found with name '" + name + "' in .pipelines/ directory");
+        }
+        result = p;
+        filePath = f.getPath();
       }
+    }
+
+    if (result != null) {
+      return FindResult.ok(result, filePath);
     }
 
     return FindResult.err("no pipeline found with name '" + name + "'");

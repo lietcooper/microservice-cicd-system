@@ -18,6 +18,10 @@ public class GitHelper {
     return git(repoPath, "rev-parse", "HEAD");
   }
 
+  public static String remoteOriginUrl(String repoPath) {
+    return git(repoPath, "remote", "get-url", "origin");
+  }
+
   public static boolean isGitRoot(String path) {
     return new File(path, ".git").isDirectory();
   }
@@ -34,15 +38,25 @@ public class GitHelper {
 
       BufferedReader reader = new BufferedReader(
           new InputStreamReader(p.getInputStream()));
+      BufferedReader errReader = new BufferedReader(
+          new InputStreamReader(p.getErrorStream()));
+      
       String line = reader.readLine();
       int exitCode = p.waitFor();
 
       if (exitCode != 0) {
-        return "";
+        StringBuilder sb = new StringBuilder();
+        String errLine;
+        while ((errLine = errReader.readLine()) != null) {
+          sb.append(errLine).append("\n");
+        }
+        throw new RuntimeException("Git command failed with exit code " + exitCode + ": " + sb.toString().trim());
       }
       return line != null ? line.trim() : "";
+    } catch (RuntimeException e) {
+      throw e;
     } catch (Exception e) {
-      return "";
+      throw new RuntimeException("Failed to execute git command", e);
     }
   }
 }

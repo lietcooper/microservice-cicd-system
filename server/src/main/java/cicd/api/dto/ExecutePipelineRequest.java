@@ -8,5 +8,5 @@ public class ExecutePipelineRequest {
     private String pipelineYaml;  // Raw YAML content (optional, if not using name)
     private String branch;        // Git branch (optional)
     private String commit;        // Git commit (optional)
-    private String repoPath;      // Repository path
+    private String repoUrl;       // Repository URL (replaces local repoPath)
 }

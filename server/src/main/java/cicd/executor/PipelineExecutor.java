@@ -29,12 +29,12 @@ public class PipelineExecutor {
 
         JobResult result = runner.runJob(job.image, job.script, repoPath);
 
-        if (result.output != null && !result.output.isBlank()) {
-          result.output.lines().forEach(l -> System.out.println("    " + l));
+        if (result.output() != null && !result.output().isBlank()) {
+          result.output().lines().forEach(l -> System.out.println("    " + l));
         }
 
         if (!result.ok()) {
-          System.err.println("  x Job '" + job.name + "' failed (exit " + result.exitCode + ")");
+          System.err.println("  x Job '" + job.name + "' failed (exit " + result.exitCode() + ")");
           System.err.println("=== Pipeline FAILED ===");
           return false;
         }

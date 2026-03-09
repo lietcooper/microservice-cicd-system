@@ -1,2 +1,2 @@
 rootProject.name = 'cicd'
-include 'common', 'cli', 'server'
+include 'common', 'cli', 'server', 'worker'
