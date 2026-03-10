@@ -1,6 +1,7 @@
 package cicd.cmd;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -45,12 +46,10 @@ class VerifyCmdTest {
     System.setErr(originalErr);
   }
 
-  // ── Valid file cases ─────────────────────────────────────────────────────────
-
   @Test
   void validDefaultPipelineFile() {
-    // The project's own .pipelines/default.yaml should be valid
-    int code = new CommandLine(new VerifyCmd()).execute(".pipelines/default.yaml");
+    int code = new CommandLine(new VerifyCmd())
+        .execute(".pipelines/default.yaml");
     restoreStreams();
     assertEquals(0, code);
     assertTrue(outContent.toString().contains("Valid!"));
@@ -58,8 +57,6 @@ class VerifyCmdTest {
 
   @Test
   void validDirectory() throws IOException {
-    // Use a temp directory with only valid files to avoid side effects
-    // from the project's .pipelines/ which may contain invalid fixtures
     Path dir = tmp.resolve("cleanpipes");
     Files.createDirectory(dir);
 
@@ -75,12 +72,11 @@ class VerifyCmdTest {
         """;
     Files.writeString(dir.resolve("clean.yaml"), yaml);
 
-    int code = new CommandLine(new VerifyCmd()).execute(dir.toString());
+    int code = new CommandLine(new VerifyCmd())
+        .execute(dir.toString());
     restoreStreams();
     assertEquals(0, code);
   }
-
-  // ── Invalid file cases ───────────────────────────────────────────────────────
 
   @Test
   void fileNotFound() {
@@ -94,17 +90,17 @@ class VerifyCmdTest {
   @Test
   void invalidYamlFileProducesErrors() throws IOException {
     String invalidYaml = "not: valid: yaml: content: :::";
-    Path f = tmp.resolve("invalid.yaml");
-    Files.writeString(f, invalidYaml);
+    Path ff = tmp.resolve("invalid.yaml");
+    Files.writeString(ff, invalidYaml);
 
-    int code = new CommandLine(new VerifyCmd()).execute(f.toString());
+    int code = new CommandLine(new VerifyCmd())
+        .execute(ff.toString());
     restoreStreams();
     assertEquals(1, code);
   }
 
   @Test
   void pipelineWithEmptyStageIsInvalid() throws IOException {
-    // A stage defined but no job assigned to it
     String yaml = """
         pipeline:
           name: emptystage
@@ -116,10 +112,11 @@ class VerifyCmdTest {
           image: alpine
           script: echo build
         """;
-    Path f = tmp.resolve("emptystage.yaml");
-    Files.writeString(f, yaml);
+    Path ff = tmp.resolve("emptystage.yaml");
+    Files.writeString(ff, yaml);
 
-    int code = new CommandLine(new VerifyCmd()).execute(f.toString());
+    int code = new CommandLine(new VerifyCmd())
+        .execute(ff.toString());
     restoreStreams();
     assertEquals(1, code);
     assertTrue(errContent.toString().contains("has no jobs"));
@@ -145,10 +142,11 @@ class VerifyCmdTest {
           needs:
             - jobA
         """;
-    Path f = tmp.resolve("cycle.yaml");
-    Files.writeString(f, yaml);
+    Path ff = tmp.resolve("cycle.yaml");
+    Files.writeString(ff, yaml);
 
-    int code = new CommandLine(new VerifyCmd()).execute(f.toString());
+    int code = new CommandLine(new VerifyCmd())
+        .execute(ff.toString());
     restoreStreams();
     assertEquals(1, code);
     assertTrue(errContent.toString().contains("cycle detected"));
@@ -156,23 +154,23 @@ class VerifyCmdTest {
 
   @Test
   void emptyYamlFileIsInvalid() throws IOException {
-    Path f = tmp.resolve("empty.yaml");
-    Files.writeString(f, "");
+    Path ff = tmp.resolve("empty.yaml");
+    Files.writeString(ff, "");
 
-    int code = new CommandLine(new VerifyCmd()).execute(f.toString());
+    int code = new CommandLine(new VerifyCmd())
+        .execute(ff.toString());
     restoreStreams();
     assertEquals(1, code);
-    org.junit.jupiter.api.Assertions.assertFalse(outContent.toString().contains("Valid!"));
+    assertFalse(outContent.toString().contains("Valid!"));
   }
-
-  // ── Directory cases ──────────────────────────────────────────────────────────
 
   @Test
   void emptyDirectoryProducesError() throws IOException {
     Path dir = tmp.resolve("pipelines");
     Files.createDirectory(dir);
 
-    int code = new CommandLine(new VerifyCmd()).execute(dir.toString());
+    int code = new CommandLine(new VerifyCmd())
+        .execute(dir.toString());
     restoreStreams();
     assertEquals(1, code);
     assertTrue(errContent.toString().contains("No YAML files found"));
@@ -195,7 +193,8 @@ class VerifyCmdTest {
         """;
     Files.writeString(dir.resolve("pipe.yaml"), yaml);
 
-    int code = new CommandLine(new VerifyCmd()).execute(dir.toString());
+    int code = new CommandLine(new VerifyCmd())
+        .execute(dir.toString());
     restoreStreams();
     assertEquals(0, code);
   }
@@ -228,7 +227,8 @@ class VerifyCmdTest {
     Files.writeString(dir.resolve("a.yaml"), yaml1);
     Files.writeString(dir.resolve("b.yaml"), yaml2);
 
-    int code = new CommandLine(new VerifyCmd()).execute(dir.toString());
+    int code = new CommandLine(new VerifyCmd())
+        .execute(dir.toString());
     restoreStreams();
     assertEquals(1, code);
     assertTrue(errContent.toString().contains("samename"));
@@ -251,16 +251,14 @@ class VerifyCmdTest {
         """;
     Files.writeString(dir.resolve("pipe.yml"), yaml);
 
-    int code = new CommandLine(new VerifyCmd()).execute(dir.toString());
+    int code = new CommandLine(new VerifyCmd())
+        .execute(dir.toString());
     restoreStreams();
     assertEquals(0, code);
   }
 
-  // ── Missing pipeline.name tests ──────────────────────────────────────────────
-
   @Test
   void pipelineMissingNameIsInvalid() throws IOException {
-    // The implementation now validates missing pipeline.name
     String yaml = """
         pipeline:
           description: no name here
@@ -271,18 +269,20 @@ class VerifyCmdTest {
           image: alpine
           script: echo ok
         """;
-    Path f = tmp.resolve("noname.yaml");
-    Files.writeString(f, yaml);
+    Path ff = tmp.resolve("noname.yaml");
+    Files.writeString(ff, yaml);
 
-    int code = new CommandLine(new VerifyCmd()).execute(f.toString());
+    int code = new CommandLine(new VerifyCmd())
+        .execute(ff.toString());
     restoreStreams();
     assertEquals(1, code);
-    assertTrue(errContent.toString().contains("pipeline name is required"));
+    assertTrue(errContent.toString().contains(
+        "pipeline name is required"));
   }
 
   @Test
-  void pipelineWithNeedsJobInDifferentStageIsInvalid() throws IOException {
-    // A job's needs must be in the same stage.
+  void pipelineWithNeedsJobInDifferentStageIsInvalid()
+      throws IOException {
     String yaml = """
         pipeline:
           name: cross-stage
@@ -300,18 +300,19 @@ class VerifyCmdTest {
           needs:
             - compile
         """;
-    Path f = tmp.resolve("crossstage.yaml");
-    Files.writeString(f, yaml);
+    Path ff = tmp.resolve("crossstage.yaml");
+    Files.writeString(ff, yaml);
 
-    int code = new CommandLine(new VerifyCmd()).execute(f.toString());
+    int code = new CommandLine(new VerifyCmd())
+        .execute(ff.toString());
     restoreStreams();
     assertEquals(1, code);
-    assertTrue(errContent.toString().contains("different stage") || errContent.toString().contains("same stage"));
+    assertTrue(errContent.toString().contains("different stage")
+        || errContent.toString().contains("same stage"));
   }
 
   @Test
   void pipelineWithEmptyNeedsListIsInvalid() throws IOException {
-    // A needs has a non-empty list of job names.
     String yaml = """
         pipeline:
           name: emptyneedslist
@@ -323,17 +324,19 @@ class VerifyCmdTest {
           script: echo ok
           needs: []
         """;
-    Path f = tmp.resolve("emptyneedsy.yaml");
-    Files.writeString(f, yaml);
+    Path ff = tmp.resolve("emptyneedsy.yaml");
+    Files.writeString(ff, yaml);
 
-    int code = new CommandLine(new VerifyCmd()).execute(f.toString());
+    int code = new CommandLine(new VerifyCmd())
+        .execute(ff.toString());
     restoreStreams();
     assertEquals(1, code);
     assertTrue(errContent.toString().contains("non-empty"));
   }
 
   @Test
-  void pipelineWithNeedsReferencingUnknownJobIsInvalid() throws IOException {
+  void pipelineWithNeedsReferencingUnknownJobIsInvalid()
+      throws IOException {
     String yaml = """
         pipeline:
           name: unknowndep
@@ -346,19 +349,18 @@ class VerifyCmdTest {
           needs:
             - nonexistentjob
         """;
-    Path f = tmp.resolve("unknowndep.yaml");
-    Files.writeString(f, yaml);
+    Path ff = tmp.resolve("unknowndep.yaml");
+    Files.writeString(ff, yaml);
 
-    int code = new CommandLine(new VerifyCmd()).execute(f.toString());
+    int code = new CommandLine(new VerifyCmd())
+        .execute(ff.toString());
     restoreStreams();
     assertEquals(1, code);
   }
 
   @Test
   void singleFileVerifySkipsUniquenessCheck() throws IOException {
-    // When verifying a single file, pipeline name uniqueness is not checked
-    // Two separate files with same name should each be valid individually
-    Path f = tmp.resolve("single.yaml");
+    Path ff = tmp.resolve("single.yaml");
     String yaml = """
         pipeline:
           name: samename
@@ -369,15 +371,17 @@ class VerifyCmdTest {
           image: alpine
           script: echo ok
         """;
-    Files.writeString(f, yaml);
+    Files.writeString(ff, yaml);
 
-    int code = new CommandLine(new VerifyCmd()).execute(f.toString());
+    int code = new CommandLine(new VerifyCmd())
+        .execute(ff.toString());
     restoreStreams();
     assertEquals(0, code);
   }
 
   @Test
-  void directoryWithMixedValidAndInvalidFilesReturnsError() throws IOException {
+  void directoryWithMixedValidAndInvalidFilesReturnsError()
+      throws IOException {
     Path dir = tmp.resolve("mixed");
     Files.createDirectory(dir);
 
@@ -402,19 +406,17 @@ class VerifyCmdTest {
           image: alpine
           script: echo valid
         """;
-    // invalid: 'test' stage has no jobs
     Files.writeString(dir.resolve("valid.yaml"), validYaml);
     Files.writeString(dir.resolve("invalid.yaml"), invalidYaml);
 
-    int code = new CommandLine(new VerifyCmd()).execute(dir.toString());
+    int code = new CommandLine(new VerifyCmd())
+        .execute(dir.toString());
     restoreStreams();
     assertEquals(1, code);
   }
 
   @Test
   void defaultPipelineFileUsedWhenNoArgGiven() {
-    // No argument means default .pipelines/default.yaml is verified
-    // Workdir is repo root which has a valid .pipelines/default.yaml
     int code = new CommandLine(new VerifyCmd()).execute();
     restoreStreams();
     assertEquals(0, code);
@@ -434,10 +436,11 @@ class VerifyCmdTest {
             - gradle checkstyleMain
             - gradle test
         """;
-    Path f = tmp.resolve("multiscript.yaml");
-    Files.writeString(f, yaml);
+    Path ff = tmp.resolve("multiscript.yaml");
+    Files.writeString(ff, yaml);
 
-    int code = new CommandLine(new VerifyCmd()).execute(f.toString());
+    int code = new CommandLine(new VerifyCmd())
+        .execute(ff.toString());
     restoreStreams();
     assertEquals(0, code);
     assertTrue(outContent.toString().contains("Valid!"));
@@ -445,8 +448,6 @@ class VerifyCmdTest {
 
   @Test
   void pipelineWithNoStagesKeyIsValid() throws IOException {
-    // When stages key is absent, default stages (build, test, docs) are assumed.
-    // All default stages must have at least one job.
     String yaml = """
         pipeline:
           name: nostageskey
@@ -463,10 +464,11 @@ class VerifyCmdTest {
           image: alpine
           script: echo docs
         """;
-    Path f = tmp.resolve("nostageskey.yaml");
-    Files.writeString(f, yaml);
+    Path ff = tmp.resolve("nostageskey.yaml");
+    Files.writeString(ff, yaml);
 
-    int code = new CommandLine(new VerifyCmd()).execute(f.toString());
+    int code = new CommandLine(new VerifyCmd())
+        .execute(ff.toString());
     restoreStreams();
     assertEquals(0, code);
   }

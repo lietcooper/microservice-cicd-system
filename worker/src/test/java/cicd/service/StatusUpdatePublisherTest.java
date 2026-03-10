@@ -1,15 +1,19 @@
 package cicd.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
 import cicd.messaging.StatusUpdateMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
 
 class StatusUpdatePublisherTest {
 
@@ -22,7 +26,7 @@ class StatusUpdatePublisherTest {
     publisher = new StatusUpdatePublisher(rabbitTemplate);
   }
 
-  // ── pipelineRunning ──────────────────────────────────────────────────────────
+  // ── pipelineRunning ────────────────────────────────
 
   @Test
   void pipelineRunningPublishesEntityTypePipeline() {
@@ -30,7 +34,8 @@ class StatusUpdatePublisherTest {
 
     ArgumentCaptor<StatusUpdateMessage> captor =
         ArgumentCaptor.forClass(StatusUpdateMessage.class);
-    verify(rabbitTemplate).convertAndSend(anyString(), anyString(), captor.capture());
+    verify(rabbitTemplate).convertAndSend(
+        anyString(), anyString(), captor.capture());
 
     StatusUpdateMessage msg = captor.getValue();
     assertEquals("PIPELINE", msg.getEntityType());
@@ -42,7 +47,7 @@ class StatusUpdatePublisherTest {
     assertNull(msg.getEndTime());
   }
 
-  // ── pipelineFailed ───────────────────────────────────────────────────────────
+  // ── pipelineFailed ─────────────────────────────────
 
   @Test
   void pipelineFailedPublishesFailedStatus() {
@@ -50,7 +55,8 @@ class StatusUpdatePublisherTest {
 
     ArgumentCaptor<StatusUpdateMessage> captor =
         ArgumentCaptor.forClass(StatusUpdateMessage.class);
-    verify(rabbitTemplate).convertAndSend(anyString(), anyString(), captor.capture());
+    verify(rabbitTemplate).convertAndSend(
+        anyString(), anyString(), captor.capture());
 
     StatusUpdateMessage msg = captor.getValue();
     assertEquals("PIPELINE", msg.getEntityType());
@@ -59,7 +65,7 @@ class StatusUpdatePublisherTest {
     assertNull(msg.getStartTime());
   }
 
-  // ── pipelineCompleted ────────────────────────────────────────────────────────
+  // ── pipelineCompleted ──────────────────────────────
 
   @Test
   void pipelineCompletedSuccessPublishesSuccessStatus() {
@@ -67,9 +73,11 @@ class StatusUpdatePublisherTest {
 
     ArgumentCaptor<StatusUpdateMessage> captor =
         ArgumentCaptor.forClass(StatusUpdateMessage.class);
-    verify(rabbitTemplate).convertAndSend(anyString(), anyString(), captor.capture());
+    verify(rabbitTemplate).convertAndSend(
+        anyString(), anyString(), captor.capture());
 
-    assertEquals("SUCCESS", captor.getValue().getStatus());
+    assertEquals("SUCCESS",
+        captor.getValue().getStatus());
     assertNotNull(captor.getValue().getEndTime());
   }
 
@@ -79,12 +87,14 @@ class StatusUpdatePublisherTest {
 
     ArgumentCaptor<StatusUpdateMessage> captor =
         ArgumentCaptor.forClass(StatusUpdateMessage.class);
-    verify(rabbitTemplate).convertAndSend(anyString(), anyString(), captor.capture());
+    verify(rabbitTemplate).convertAndSend(
+        anyString(), anyString(), captor.capture());
 
-    assertEquals("FAILED", captor.getValue().getStatus());
+    assertEquals("FAILED",
+        captor.getValue().getStatus());
   }
 
-  // ── stageStarted ─────────────────────────────────────────────────────────────
+  // ── stageStarted ───────────────────────────────────
 
   @Test
   void stageStartedPublishesEntityTypeStage() {
@@ -92,7 +102,8 @@ class StatusUpdatePublisherTest {
 
     ArgumentCaptor<StatusUpdateMessage> captor =
         ArgumentCaptor.forClass(StatusUpdateMessage.class);
-    verify(rabbitTemplate).convertAndSend(anyString(), anyString(), captor.capture());
+    verify(rabbitTemplate).convertAndSend(
+        anyString(), anyString(), captor.capture());
 
     StatusUpdateMessage msg = captor.getValue();
     assertEquals("STAGE", msg.getEntityType());
@@ -102,40 +113,48 @@ class StatusUpdatePublisherTest {
     assertNotNull(msg.getStartTime());
   }
 
-  // ── stageCompleted ───────────────────────────────────────────────────────────
+  // ── stageCompleted ─────────────────────────────────
 
   @Test
   void stageCompletedSuccessPublishesSuccessStatus() {
-    publisher.stageCompleted(1L, "pipe", 1, "build", true);
+    publisher.stageCompleted(
+        1L, "pipe", 1, "build", true);
 
     ArgumentCaptor<StatusUpdateMessage> captor =
         ArgumentCaptor.forClass(StatusUpdateMessage.class);
-    verify(rabbitTemplate).convertAndSend(anyString(), anyString(), captor.capture());
+    verify(rabbitTemplate).convertAndSend(
+        anyString(), anyString(), captor.capture());
 
-    assertEquals("SUCCESS", captor.getValue().getStatus());
+    assertEquals("SUCCESS",
+        captor.getValue().getStatus());
     assertNotNull(captor.getValue().getEndTime());
   }
 
   @Test
   void stageCompletedFailurePublishesFailedStatus() {
-    publisher.stageCompleted(1L, "pipe", 1, "test", false);
+    publisher.stageCompleted(
+        1L, "pipe", 1, "test", false);
 
     ArgumentCaptor<StatusUpdateMessage> captor =
         ArgumentCaptor.forClass(StatusUpdateMessage.class);
-    verify(rabbitTemplate).convertAndSend(anyString(), anyString(), captor.capture());
+    verify(rabbitTemplate).convertAndSend(
+        anyString(), anyString(), captor.capture());
 
-    assertEquals("FAILED", captor.getValue().getStatus());
+    assertEquals("FAILED",
+        captor.getValue().getStatus());
   }
 
-  // ── jobCreated ───────────────────────────────────────────────────────────────
+  // ── jobCreated ─────────────────────────────────────
 
   @Test
   void jobCreatedPublishesEntityTypeJobWithPendingStatus() {
-    publisher.jobCreated(1L, "pipe", 1, "build", "compile");
+    publisher.jobCreated(
+        1L, "pipe", 1, "build", "compile");
 
     ArgumentCaptor<StatusUpdateMessage> captor =
         ArgumentCaptor.forClass(StatusUpdateMessage.class);
-    verify(rabbitTemplate).convertAndSend(anyString(), anyString(), captor.capture());
+    verify(rabbitTemplate).convertAndSend(
+        anyString(), anyString(), captor.capture());
 
     StatusUpdateMessage msg = captor.getValue();
     assertEquals("JOB", msg.getEntityType());
@@ -145,54 +164,64 @@ class StatusUpdatePublisherTest {
     assertNotNull(msg.getStartTime());
   }
 
-  // ── jobStarted ───────────────────────────────────────────────────────────────
+  // ── jobStarted ─────────────────────────────────────
 
   @Test
   void jobStartedPublishesRunningStatus() {
-    publisher.jobStarted(1L, "pipe", 1, "build", "compile");
+    publisher.jobStarted(
+        1L, "pipe", 1, "build", "compile");
 
     ArgumentCaptor<StatusUpdateMessage> captor =
         ArgumentCaptor.forClass(StatusUpdateMessage.class);
-    verify(rabbitTemplate).convertAndSend(anyString(), anyString(), captor.capture());
+    verify(rabbitTemplate).convertAndSend(
+        anyString(), anyString(), captor.capture());
 
-    assertEquals("RUNNING", captor.getValue().getStatus());
+    assertEquals("RUNNING",
+        captor.getValue().getStatus());
   }
 
-  // ── jobCompleted ─────────────────────────────────────────────────────────────
+  // ── jobCompleted ───────────────────────────────────
 
   @Test
   void jobCompletedSuccessPublishesSuccessStatus() {
-    publisher.jobCompleted(1L, "pipe", 1, "build", "compile", true);
+    publisher.jobCompleted(
+        1L, "pipe", 1, "build", "compile", true);
 
     ArgumentCaptor<StatusUpdateMessage> captor =
         ArgumentCaptor.forClass(StatusUpdateMessage.class);
-    verify(rabbitTemplate).convertAndSend(anyString(), anyString(), captor.capture());
+    verify(rabbitTemplate).convertAndSend(
+        anyString(), anyString(), captor.capture());
 
-    assertEquals("SUCCESS", captor.getValue().getStatus());
+    assertEquals("SUCCESS",
+        captor.getValue().getStatus());
     assertNotNull(captor.getValue().getEndTime());
   }
 
   @Test
   void jobCompletedFailurePublishesFailedStatus() {
-    publisher.jobCompleted(1L, "pipe", 1, "build", "compile", false);
+    publisher.jobCompleted(
+        1L, "pipe", 1, "build", "compile", false);
 
     ArgumentCaptor<StatusUpdateMessage> captor =
         ArgumentCaptor.forClass(StatusUpdateMessage.class);
-    verify(rabbitTemplate).convertAndSend(anyString(), anyString(), captor.capture());
+    verify(rabbitTemplate).convertAndSend(
+        anyString(), anyString(), captor.capture());
 
-    assertEquals("FAILED", captor.getValue().getStatus());
+    assertEquals("FAILED",
+        captor.getValue().getStatus());
   }
 
-  // ── All messages published to correct exchange/key ───────────────────────────
+  // ── All messages published to correct exchange/key ─
 
   @Test
   void allMessagesPublishedToStatusExchange() {
     publisher.pipelineRunning(1L, "p", 1);
     publisher.stageStarted(1L, "p", 1, "build", 0);
-    publisher.jobCreated(1L, "p", 1, "build", "compile");
+    publisher.jobCreated(
+        1L, "p", 1, "build", "compile");
 
-    // All three should be published
     verify(rabbitTemplate, times(3))
-        .convertAndSend(anyString(), anyString(), any(StatusUpdateMessage.class));
+        .convertAndSend(anyString(), anyString(),
+            any(StatusUpdateMessage.class));
   }
 }

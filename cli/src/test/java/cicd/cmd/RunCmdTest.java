@@ -1,7 +1,6 @@
 package cicd.cmd;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -33,15 +32,14 @@ class RunCmdTest {
     System.setErr(originalErr);
   }
 
-  // ── Option validation ─────────────────────────────────────────────────────────
-
   @Test
   void testNoArgs() {
     int code = new CommandLine(new RunCmd()).execute();
     restoreStreams();
     assertEquals(1, code);
-    assertTrue(errContent.toString().contains("repo-url must be specified") 
-        || errContent.toString().contains("must specify either --name or --file"));
+    assertTrue(errContent.toString().contains("repo-url must be specified")
+        || errContent.toString().contains(
+            "must specify either --name or --file"));
   }
 
   @Test
@@ -66,54 +64,46 @@ class RunCmdTest {
 
   @Test
   void testRepoUrlRequiredWhenNotInGitRoot() {
-    // We can't easily mock "not in git root" without complex setup, 
-    // but we can test that providing repo-url avoids the error.
     int code = new CommandLine(new RunCmd()).execute(
         "--repo-url", "http://github.com/repo",
         "--name", "default",
         "--server", "http://localhost:19999");
     restoreStreams();
-    // Should fail with connection error, NOT "repo-url must be specified"
-    assertTrue(errContent.toString().contains("Failed to communicate with server"));
+    assertTrue(errContent.toString().contains(
+        "Failed to communicate with server"));
   }
-
-  // ── Connection failure when server not running ────────────────────────────────
 
   @Test
   void testNameOptionAttemptsServerConnection() {
-    // When name is given and no other invalid condition, it tries to contact server
     int code = new CommandLine(new RunCmd()).execute(
         "--repo-url", "http://github.com/repo",
         "--name", "default",
         "--server", "http://localhost:19999");
     restoreStreams();
-    // Should fail because no server at that port
     assertEquals(1, code);
-    assertTrue(errContent.toString().contains("Failed to communicate with server"));
+    assertTrue(errContent.toString().contains(
+        "Failed to communicate with server"));
   }
 
   @Test
   void testFileOptionAttemptsServerConnection() {
-    // Create a dummy file to satisfy the local file existence check
     java.io.File dummy = new java.io.File("dummy.yaml");
     try {
-        dummy.createNewFile();
-        int code = new CommandLine(new RunCmd()).execute(
-            "--repo-url", "http://github.com/repo",
-            "--file", "dummy.yaml",
-            "--server", "http://localhost:19999");
-        restoreStreams();
-        // Should fail because no server at that port
-        assertEquals(1, code);
-        assertTrue(errContent.toString().contains("Failed to communicate with server"));
-    } catch (java.io.IOException e) {
-        restoreStreams();
+      dummy.createNewFile();
+      int code = new CommandLine(new RunCmd()).execute(
+          "--repo-url", "http://github.com/repo",
+          "--file", "dummy.yaml",
+          "--server", "http://localhost:19999");
+      restoreStreams();
+      assertEquals(1, code);
+      assertTrue(errContent.toString().contains(
+          "Failed to communicate with server"));
+    } catch (java.io.IOException ex) {
+      restoreStreams();
     } finally {
-        dummy.delete();
+      dummy.delete();
     }
   }
-
-  // ── Additional edge cases ────────────────────────────────────────────────────
 
   @Test
   void testBranchOptionAloneWithoutNameOrFile() {
@@ -122,7 +112,8 @@ class RunCmdTest {
         "--branch", "main");
     restoreStreams();
     assertEquals(1, code);
-    assertTrue(errContent.toString().contains("must specify either --name or --file"));
+    assertTrue(errContent.toString().contains(
+        "must specify either --name or --file"));
   }
 
   @Test
@@ -132,7 +123,8 @@ class RunCmdTest {
         "--commit", "abc123");
     restoreStreams();
     assertEquals(1, code);
-    assertTrue(errContent.toString().contains("must specify either --name or --file"));
+    assertTrue(errContent.toString().contains(
+        "must specify either --name or --file"));
   }
 
   @Test

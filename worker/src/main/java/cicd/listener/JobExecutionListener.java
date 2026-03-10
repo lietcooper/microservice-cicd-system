@@ -23,6 +23,7 @@ public class JobExecutionListener {
   private final StatusEventPublisher eventPublisher;
   private final StatusUpdatePublisher statusPublisher;
 
+  /** Creates a listener with the given dependencies. */
   public JobExecutionListener(RabbitTemplate rabbitTemplate,
       StatusEventPublisher eventPublisher,
       StatusUpdatePublisher statusPublisher) {
@@ -32,6 +33,7 @@ public class JobExecutionListener {
     this.statusPublisher = statusPublisher;
   }
 
+  /** Executes a job in Docker and publishes the result. */
   @RabbitListener(queues = RabbitMqConfig.JOB_EXECUTE_QUEUE)
   public void onJobExecute(JobExecuteMessage msg) {
     System.out.println("  > Job Worker: executing '" + msg.getJobName()

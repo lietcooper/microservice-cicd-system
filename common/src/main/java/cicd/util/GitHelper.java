@@ -4,24 +4,30 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
 
+/** Utility class for executing Git commands. */
 public class GitHelper {
 
+  /** Returns the current branch name. */
   public static String currentBranch(String repoPath) {
     return git(repoPath, "rev-parse", "--abbrev-ref", "HEAD");
   }
 
+  /** Returns the abbreviated current commit hash. */
   public static String currentCommit(String repoPath) {
     return git(repoPath, "rev-parse", "--short", "HEAD");
   }
 
+  /** Returns the full current commit hash. */
   public static String currentCommitFull(String repoPath) {
     return git(repoPath, "rev-parse", "HEAD");
   }
 
+  /** Returns the remote origin URL. */
   public static String remoteOriginUrl(String repoPath) {
     return git(repoPath, "remote", "get-url", "origin");
   }
 
+  /** Returns true if the path contains a .git directory. */
   public static boolean isGitRoot(String path) {
     return new File(path, ".git").isDirectory();
   }
@@ -34,15 +40,15 @@ public class GitHelper {
 
       ProcessBuilder pb = new ProcessBuilder(cmd);
       pb.directory(new File(repoPath));
-      Process p = pb.start();
+      Process proc = pb.start();
 
       BufferedReader reader = new BufferedReader(
-          new InputStreamReader(p.getInputStream()));
+          new InputStreamReader(proc.getInputStream()));
       BufferedReader errReader = new BufferedReader(
-          new InputStreamReader(p.getErrorStream()));
-      
+          new InputStreamReader(proc.getErrorStream()));
+
       String line = reader.readLine();
-      int exitCode = p.waitFor();
+      int exitCode = proc.waitFor();
 
       if (exitCode != 0) {
         StringBuilder sb = new StringBuilder();
@@ -50,13 +56,16 @@ public class GitHelper {
         while ((errLine = errReader.readLine()) != null) {
           sb.append(errLine).append("\n");
         }
-        throw new RuntimeException("Git command failed with exit code " + exitCode + ": " + sb.toString().trim());
+        throw new RuntimeException(
+            "Git command failed with exit code "
+                + exitCode + ": " + sb.toString().trim());
       }
       return line != null ? line.trim() : "";
-    } catch (RuntimeException e) {
-      throw e;
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to execute git command", e);
+    } catch (RuntimeException ex) {
+      throw ex;
+    } catch (Exception ex) {
+      throw new RuntimeException(
+          "Failed to execute git command", ex);
     }
   }
 }

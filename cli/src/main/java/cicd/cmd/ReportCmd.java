@@ -1,18 +1,17 @@
 package cicd.cmd;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
+/** Queries and displays pipeline execution history from the server. */
 @Command(
     name = "report",
     description = "Query pipeline execution history"
@@ -70,7 +69,8 @@ public class ReportCmd implements Callable<Integer> {
         return 1;
       }
       if (!response.isSuccessful()) {
-        System.err.println("error: server returned " + response.code() + " - " + body);
+        System.err.println(
+            "error: server returned " + response.code() + " - " + body);
         return 1;
       }
 
@@ -79,8 +79,9 @@ public class ReportCmd implements Callable<Integer> {
       printReport(json);
       return 0;
 
-    } catch (IOException e) {
-      System.err.println("error: could not connect to server at " + serverUrl);
+    } catch (IOException ex) {
+      System.err.println(
+          "error: could not connect to server at " + serverUrl);
       System.err.println("Make sure the server is running.");
       return 1;
     }
@@ -105,19 +106,16 @@ public class ReportCmd implements Callable<Integer> {
     return sb.toString();
   }
 
-  /** Prints the JSON response in a YAML-like format based on the level. */
+  /** Prints the JSON response based on the query level. */
   private void printReport(JsonNode json) {
     if (run == null) {
-      // Level 1: all runs for a pipeline
       printLevel1(json);
     } else {
-      // Level 2, 3, 4: run detail (same response shape)
       printRunDetail(json);
     }
   }
 
-  // ── Level 1 ────────────────────────────────────────────────────────────────
-
+  /** Prints all runs for a pipeline. */
   private void printLevel1(JsonNode json) {
     System.out.println("pipeline: " + text(json, "pipelineName"));
     System.out.println("runs:");
@@ -128,18 +126,17 @@ public class ReportCmd implements Callable<Integer> {
       return;
     }
 
-    for (JsonNode r : runs) {
-      System.out.println("  - run-no: " + r.path("run-no").asInt());
-      System.out.println("    status: " + text(r, "status"));
-      System.out.println("    git-branch: " + text(r, "git-branch"));
-      System.out.println("    git-hash: " + text(r, "git-hash"));
-      System.out.println("    start: " + text(r, "start"));
-      System.out.println("    end: " + text(r, "end"));
+    for (JsonNode rn : runs) {
+      System.out.println("  - run-no: " + rn.path("run-no").asInt());
+      System.out.println("    status: " + text(rn, "status"));
+      System.out.println("    git-branch: " + text(rn, "git-branch"));
+      System.out.println("    git-hash: " + text(rn, "git-hash"));
+      System.out.println("    start: " + text(rn, "start"));
+      System.out.println("    end: " + text(rn, "end"));
     }
   }
 
-  // ── Level 2 / 3 / 4 ────────────────────────────────────────────────────────
-
+  /** Prints detailed run information including stages and jobs. */
   private void printRunDetail(JsonNode json) {
     System.out.println("pipeline: " + text(json, "pipelineName"));
     System.out.println("run-no: " + json.path("run-no").asInt());
@@ -156,20 +153,20 @@ public class ReportCmd implements Callable<Integer> {
     }
 
     System.out.println("stages:");
-    for (JsonNode s : stages) {
-      System.out.println("  - name: " + text(s, "name"));
-      System.out.println("    status: " + text(s, "status"));
-      System.out.println("    start: " + text(s, "start"));
-      System.out.println("    end: " + text(s, "end"));
+    for (JsonNode st : stages) {
+      System.out.println("  - name: " + text(st, "name"));
+      System.out.println("    status: " + text(st, "status"));
+      System.out.println("    start: " + text(st, "start"));
+      System.out.println("    end: " + text(st, "end"));
 
-      JsonNode jobs = s.path("jobs");
+      JsonNode jobs = st.path("jobs");
       if (!jobs.isMissingNode() && jobs.isArray()) {
         System.out.println("    jobs:");
-        for (JsonNode j : jobs) {
-          System.out.println("      - name: " + text(j, "name"));
-          System.out.println("        status: " + text(j, "status"));
-          System.out.println("        start: " + text(j, "start"));
-          System.out.println("        end: " + text(j, "end"));
+        for (JsonNode jb : jobs) {
+          System.out.println("      - name: " + text(jb, "name"));
+          System.out.println("        status: " + text(jb, "status"));
+          System.out.println("        start: " + text(jb, "start"));
+          System.out.println("        end: " + text(jb, "end"));
         }
       }
     }
@@ -177,7 +174,7 @@ public class ReportCmd implements Callable<Integer> {
 
   /** Returns the text value of a JSON field, or "null" if missing. */
   private static String text(JsonNode node, String field) {
-    JsonNode v = node.path(field);
-    return v.isMissingNode() || v.isNull() ? "null" : v.asText();
+    JsonNode val = node.path(field);
+    return val.isMissingNode() || val.isNull() ? "null" : val.asText();
   }
 }

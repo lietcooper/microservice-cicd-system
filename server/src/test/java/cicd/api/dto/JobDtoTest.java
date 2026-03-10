@@ -241,8 +241,8 @@ class JobDtoTest {
 
   @Test
   void equalsReturnsFalseWhenStartTimeDiffers() {
-    OffsetDateTime ts1 = OffsetDateTime.parse("2025-01-01T10:00:00+00:00");
-    OffsetDateTime ts2 = OffsetDateTime.parse("2025-01-01T11:00:00+00:00");
+    final OffsetDateTime ts1 = OffsetDateTime.parse("2025-01-01T10:00:00+00:00");
+    final OffsetDateTime ts2 = OffsetDateTime.parse("2025-01-01T11:00:00+00:00");
 
     JobDto dto1 = new JobDto();
     dto1.setName("job");

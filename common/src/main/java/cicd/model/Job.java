@@ -3,6 +3,7 @@ package cicd.model;
 import java.util.ArrayList;
 import java.util.List;
 
+/** Represents a single job in a pipeline stage. */
 public class Job {
 
   public String name;

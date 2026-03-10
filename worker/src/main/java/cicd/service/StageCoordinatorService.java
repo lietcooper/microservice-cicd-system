@@ -35,7 +35,8 @@ public class StageCoordinatorService {
    * @param correlationId the wave this result belongs to
    * @param result the job result message
    */
-  public void recordResult(String correlationId, JobResultMessage result) {
+  public void recordResult(String correlationId,
+      JobResultMessage result) {
     WaveTracker tracker = waveTrackers.get(correlationId);
     if (tracker != null) {
       tracker.addResult(result);
@@ -55,7 +56,8 @@ public class StageCoordinatorService {
       return null;
     }
     try {
-      boolean completed = tracker.await(WAVE_TIMEOUT_MINUTES, TimeUnit.MINUTES);
+      boolean completed = tracker.await(
+          WAVE_TIMEOUT_MINUTES, TimeUnit.MINUTES);
       if (!completed) {
         tracker.setTimedOut(true);
       }
@@ -66,9 +68,7 @@ public class StageCoordinatorService {
     return tracker;
   }
 
-  /**
-   * Removes and cleans up a completed wave tracker.
-   */
+  /** Removes and cleans up a completed wave tracker. */
   public void removeWave(String correlationId) {
     waveTrackers.remove(correlationId);
   }
@@ -82,38 +82,56 @@ public class StageCoordinatorService {
     private final List<JobResultMessage> results;
     private volatile boolean timedOut;
 
+    /** Creates a tracker expecting the given number of jobs. */
     public WaveTracker(int jobCount) {
       this.latch = new CountDownLatch(jobCount);
       this.results = new ArrayList<>();
       this.timedOut = false;
     }
 
+    /** Decrements the remaining job count by one. */
     public void countDown() {
       latch.countDown();
     }
 
-    public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
+    /**
+     * Awaits completion up to the given timeout.
+     *
+     * @param timeout the maximum time to wait
+     * @param unit the time unit
+     * @return true if all jobs completed in time
+     * @throws InterruptedException if interrupted while waiting
+     */
+    public boolean await(long timeout, TimeUnit unit)
+        throws InterruptedException {
       return latch.await(timeout, unit);
     }
 
-    public synchronized void addResult(JobResultMessage result) {
+    /** Adds a job result to this wave tracker. */
+    public synchronized void addResult(
+        JobResultMessage result) {
       results.add(result);
     }
 
+    /** Returns a copy of all recorded results. */
     public synchronized List<JobResultMessage> getResults() {
       return new ArrayList<>(results);
     }
 
+    /** Returns whether this wave timed out. */
     public boolean isTimedOut() {
       return timedOut;
     }
 
+    /** Sets whether this wave timed out. */
     public void setTimedOut(boolean timedOut) {
       this.timedOut = timedOut;
     }
 
+    /** Returns true if all jobs succeeded and no timeout occurred. */
     public boolean allSucceeded() {
-      return !timedOut && results.stream().allMatch(JobResultMessage::isSuccess);
+      return !timedOut
+          && results.stream().allMatch(JobResultMessage::isSuccess);
     }
   }
 }

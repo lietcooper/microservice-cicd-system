@@ -1,14 +1,18 @@
 package cicd.messaging;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.time.OffsetDateTime;
 import java.util.Arrays;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 class MessageSerializationTest {
 
@@ -33,14 +37,17 @@ class MessageSerializationTest {
     assertEquals(42L, deserialized.getPipelineRunId());
     assertEquals("default", deserialized.getPipelineName());
     assertEquals(5, deserialized.getRunNo());
-    assertEquals("pipeline:\n  name: default", deserialized.getPipelineYaml());
-    assertArrayEquals(new byte[] {1, 2}, deserialized.getWorkspaceArchive());
+    assertEquals("pipeline:\n  name: default",
+        deserialized.getPipelineYaml());
+    assertArrayEquals(new byte[] {1, 2},
+        deserialized.getWorkspaceArchive());
     assertEquals("main", deserialized.getGitBranch());
     assertEquals("abc123", deserialized.getGitCommit());
   }
 
   @Test
-  void testPipelineExecuteMessageDefaultConstructor() throws Exception {
+  void testPipelineExecuteMessageDefaultConstructor()
+      throws Exception {
     PipelineExecuteMessage msg = new PipelineExecuteMessage();
     msg.setPipelineRunId(1L);
     msg.setPipelineName("test");
@@ -65,7 +72,8 @@ class MessageSerializationTest {
     original.setPipelineName("default");
     original.setRunNo(5);
     original.setImage("gradle:jdk21");
-    original.setScripts(Arrays.asList("gradle build", "gradle test"));
+    original.setScripts(
+        Arrays.asList("gradle build", "gradle test"));
     original.setWorkspacePath("/repo");
     original.setTotalJobsInWave(3);
 
@@ -81,8 +89,10 @@ class MessageSerializationTest {
     assertEquals(5, deserialized.getRunNo());
     assertEquals("gradle:jdk21", deserialized.getImage());
     assertEquals(2, deserialized.getScripts().size());
-    assertEquals("gradle build", deserialized.getScripts().get(0));
-    assertEquals("gradle test", deserialized.getScripts().get(1));
+    assertEquals("gradle build",
+        deserialized.getScripts().get(0));
+    assertEquals("gradle test",
+        deserialized.getScripts().get(1));
     assertEquals("/repo", deserialized.getWorkspacePath());
     assertEquals(3, deserialized.getTotalJobsInWave());
   }
@@ -146,7 +156,8 @@ class MessageSerializationTest {
     StatusEventMessage deserialized = mapper.readValue(
         json, StatusEventMessage.class);
 
-    assertEquals("pipeline.started", deserialized.getEventType());
+    assertEquals("pipeline.started",
+        deserialized.getEventType());
     assertEquals(1L, deserialized.getPipelineRunId());
     assertEquals("default", deserialized.getPipelineName());
     assertEquals(3, deserialized.getRunNo());
@@ -154,7 +165,8 @@ class MessageSerializationTest {
     assertNull(deserialized.getJobName());
     assertEquals("RUNNING", deserialized.getStatus());
     assertNotNull(deserialized.getTimestamp());
-    assertEquals("Pipeline started", deserialized.getMessage());
+    assertEquals("Pipeline started",
+        deserialized.getMessage());
   }
 
   @Test
@@ -182,7 +194,6 @@ class MessageSerializationTest {
 
   @Test
   void testIgnoresUnknownFields() throws Exception {
-    // Simulate receiving a message with extra fields
     String json = "{\"pipelineRunId\":1,\"pipelineName\":\"test\","
         + "\"unknownField\":\"value\",\"runNo\":1}";
 
@@ -199,7 +210,6 @@ class MessageSerializationTest {
     JobResultMessage original = new JobResultMessage();
     original.setSuccess(false);
     original.setExitCode(127);
-    // output, correlationId etc. left as null
 
     String json = mapper.writeValueAsString(original);
     JobResultMessage deserialized = mapper.readValue(

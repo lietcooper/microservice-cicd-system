@@ -9,9 +9,11 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import org.springframework.stereotype.Service;
 
+/** Creates zip archives of workspace directories. */
 @Service
 public class WorkspaceArchiveService {
 
+  /** Archives the given workspace directory as a zip byte array. */
   public byte[] createArchive(Path workspaceDir) {
     try {
       ByteArrayOutputStream buffer = new ByteArrayOutputStream();
@@ -21,12 +23,14 @@ public class WorkspaceArchiveService {
             .forEach(path -> addEntry(workspaceDir, path, zipOut));
       }
       return buffer.toByteArray();
-    } catch (IOException e) {
-      throw new RuntimeException("Failed to create workspace archive", e);
+    } catch (IOException ex) {
+      throw new RuntimeException(
+          "Failed to create workspace archive", ex);
     }
   }
 
-  private void addEntry(Path workspaceDir, Path file, ZipOutputStream zipOut) {
+  private void addEntry(Path workspaceDir, Path file,
+      ZipOutputStream zipOut) {
     Path relativePath = workspaceDir.relativize(file);
     ZipEntry entry = new ZipEntry(relativePath.toString());
     try {
@@ -35,9 +39,10 @@ public class WorkspaceArchiveService {
         input.transferTo(zipOut);
       }
       zipOut.closeEntry();
-    } catch (IOException e) {
-      throw new RuntimeException("Failed to add file to workspace archive: "
-          + relativePath, e);
+    } catch (IOException ex) {
+      throw new RuntimeException(
+          "Failed to add file to workspace archive: "
+          + relativePath, ex);
     }
   }
 }

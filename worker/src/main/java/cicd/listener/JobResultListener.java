@@ -15,10 +15,12 @@ public class JobResultListener {
 
   private final StageCoordinatorService coordinator;
 
+  /** Creates a listener with the given coordinator. */
   public JobResultListener(StageCoordinatorService coordinator) {
     this.coordinator = coordinator;
   }
 
+  /** Forwards a job result to the stage coordinator. */
   @RabbitListener(queues = RabbitMqConfig.JOB_RESULTS_QUEUE)
   public void onJobResult(JobResultMessage result) {
     System.out.println("  < Result received: job='" + result.getJobName()

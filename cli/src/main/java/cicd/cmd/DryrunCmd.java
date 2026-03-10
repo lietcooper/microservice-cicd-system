@@ -12,6 +12,7 @@ import java.util.concurrent.Callable;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
 
+/** Dry-run command that validates and prints execution order. */
 @Command(
     name = "dryrun",
     description = "Dry-run a pipeline: validate and print execution order"

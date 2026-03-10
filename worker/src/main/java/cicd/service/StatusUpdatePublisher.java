@@ -15,31 +15,39 @@ public class StatusUpdatePublisher {
 
   private final RabbitTemplate rabbitTemplate;
 
-  public StatusUpdatePublisher(RabbitTemplate rabbitTemplate) {
+  /** Creates a publisher with the given template. */
+  public StatusUpdatePublisher(
+      RabbitTemplate rabbitTemplate) {
     this.rabbitTemplate = rabbitTemplate;
   }
 
   // --- Pipeline-level updates ---
 
-  public void pipelineRunning(Long pipelineRunId, String pipelineName,
-      int runNo) {
-    StatusUpdateMessage msg = buildPipeline(pipelineRunId, pipelineName, runNo);
+  /** Publishes a pipeline-running status update. */
+  public void pipelineRunning(Long pipelineRunId,
+      String pipelineName, int runNo) {
+    StatusUpdateMessage msg =
+        buildPipeline(pipelineRunId, pipelineName, runNo);
     msg.setStatus("RUNNING");
     msg.setStartTime(OffsetDateTime.now());
     publish(msg);
   }
 
-  public void pipelineFailed(Long pipelineRunId, String pipelineName,
-      int runNo) {
-    StatusUpdateMessage msg = buildPipeline(pipelineRunId, pipelineName, runNo);
+  /** Publishes a pipeline-failed status update. */
+  public void pipelineFailed(Long pipelineRunId,
+      String pipelineName, int runNo) {
+    StatusUpdateMessage msg =
+        buildPipeline(pipelineRunId, pipelineName, runNo);
     msg.setStatus("FAILED");
     msg.setEndTime(OffsetDateTime.now());
     publish(msg);
   }
 
-  public void pipelineCompleted(Long pipelineRunId, String pipelineName,
-      int runNo, boolean success) {
-    StatusUpdateMessage msg = buildPipeline(pipelineRunId, pipelineName, runNo);
+  /** Publishes a pipeline-completed status update. */
+  public void pipelineCompleted(Long pipelineRunId,
+      String pipelineName, int runNo, boolean success) {
+    StatusUpdateMessage msg =
+        buildPipeline(pipelineRunId, pipelineName, runNo);
     msg.setStatus(success ? "SUCCESS" : "FAILED");
     msg.setEndTime(OffsetDateTime.now());
     publish(msg);
@@ -47,20 +55,24 @@ public class StatusUpdatePublisher {
 
   // --- Stage-level updates ---
 
-  public void stageStarted(Long pipelineRunId, String pipelineName,
-      int runNo, String stageName, int stageOrder) {
-    StatusUpdateMessage msg = buildStage(pipelineRunId, pipelineName, runNo,
-        stageName);
+  /** Publishes a stage-started status update. */
+  public void stageStarted(Long pipelineRunId,
+      String pipelineName, int runNo, String stageName,
+      int stageOrder) {
+    StatusUpdateMessage msg = buildStage(
+        pipelineRunId, pipelineName, runNo, stageName);
     msg.setStageOrder(stageOrder);
     msg.setStatus("RUNNING");
     msg.setStartTime(OffsetDateTime.now());
     publish(msg);
   }
 
-  public void stageCompleted(Long pipelineRunId, String pipelineName,
-      int runNo, String stageName, boolean success) {
-    StatusUpdateMessage msg = buildStage(pipelineRunId, pipelineName, runNo,
-        stageName);
+  /** Publishes a stage-completed status update. */
+  public void stageCompleted(Long pipelineRunId,
+      String pipelineName, int runNo, String stageName,
+      boolean success) {
+    StatusUpdateMessage msg = buildStage(
+        pipelineRunId, pipelineName, runNo, stageName);
     msg.setStatus(success ? "SUCCESS" : "FAILED");
     msg.setEndTime(OffsetDateTime.now());
     publish(msg);
@@ -68,27 +80,36 @@ public class StatusUpdatePublisher {
 
   // --- Job-level updates ---
 
-  public void jobCreated(Long pipelineRunId, String pipelineName,
-      int runNo, String stageName, String jobName) {
-    StatusUpdateMessage msg = buildJob(pipelineRunId, pipelineName, runNo,
+  /** Publishes a job-created status update. */
+  public void jobCreated(Long pipelineRunId,
+      String pipelineName, int runNo, String stageName,
+      String jobName) {
+    StatusUpdateMessage msg = buildJob(
+        pipelineRunId, pipelineName, runNo,
         stageName, jobName);
     msg.setStatus("PENDING");
     msg.setStartTime(OffsetDateTime.now());
     publish(msg);
   }
 
-  public void jobStarted(Long pipelineRunId, String pipelineName,
-      int runNo, String stageName, String jobName) {
-    StatusUpdateMessage msg = buildJob(pipelineRunId, pipelineName, runNo,
+  /** Publishes a job-started status update. */
+  public void jobStarted(Long pipelineRunId,
+      String pipelineName, int runNo, String stageName,
+      String jobName) {
+    StatusUpdateMessage msg = buildJob(
+        pipelineRunId, pipelineName, runNo,
         stageName, jobName);
     msg.setStatus("RUNNING");
     msg.setStartTime(OffsetDateTime.now());
     publish(msg);
   }
 
-  public void jobCompleted(Long pipelineRunId, String pipelineName,
-      int runNo, String stageName, String jobName, boolean success) {
-    StatusUpdateMessage msg = buildJob(pipelineRunId, pipelineName, runNo,
+  /** Publishes a job-completed status update. */
+  public void jobCompleted(Long pipelineRunId,
+      String pipelineName, int runNo, String stageName,
+      String jobName, boolean success) {
+    StatusUpdateMessage msg = buildJob(
+        pipelineRunId, pipelineName, runNo,
         stageName, jobName);
     msg.setStatus(success ? "SUCCESS" : "FAILED");
     msg.setEndTime(OffsetDateTime.now());
@@ -97,8 +118,8 @@ public class StatusUpdatePublisher {
 
   // --- Helpers ---
 
-  private StatusUpdateMessage buildPipeline(Long pipelineRunId,
-      String pipelineName, int runNo) {
+  private StatusUpdateMessage buildPipeline(
+      Long pipelineRunId, String pipelineName, int runNo) {
     StatusUpdateMessage msg = new StatusUpdateMessage();
     msg.setEntityType("PIPELINE");
     msg.setPipelineRunId(pipelineRunId);
@@ -107,8 +128,9 @@ public class StatusUpdatePublisher {
     return msg;
   }
 
-  private StatusUpdateMessage buildStage(Long pipelineRunId,
-      String pipelineName, int runNo, String stageName) {
+  private StatusUpdateMessage buildStage(
+      Long pipelineRunId, String pipelineName,
+      int runNo, String stageName) {
     StatusUpdateMessage msg = new StatusUpdateMessage();
     msg.setEntityType("STAGE");
     msg.setPipelineRunId(pipelineRunId);
@@ -118,8 +140,9 @@ public class StatusUpdatePublisher {
     return msg;
   }
 
-  private StatusUpdateMessage buildJob(Long pipelineRunId,
-      String pipelineName, int runNo, String stageName, String jobName) {
+  private StatusUpdateMessage buildJob(
+      Long pipelineRunId, String pipelineName,
+      int runNo, String stageName, String jobName) {
     StatusUpdateMessage msg = new StatusUpdateMessage();
     msg.setEntityType("JOB");
     msg.setPipelineRunId(pipelineRunId);

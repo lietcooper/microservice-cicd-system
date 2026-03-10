@@ -19,6 +19,7 @@ public class ExecutionPlanner {
 
   private final Pipeline pipeline;
 
+  /** Creates a planner for the given pipeline. */
   public ExecutionPlanner(Pipeline pipeline) {
     this.pipeline = pipeline;
   }
@@ -103,7 +104,9 @@ public class ExecutionPlanner {
       }
 
       if (wave.isEmpty()) {
-        throw new IllegalStateException("cycle detected in dependencies for stage jobs: " + remaining.keySet());
+        throw new IllegalStateException(
+            "cycle detected in dependencies for stage jobs: "
+                + remaining.keySet());
       }
 
       // Remove processed jobs and decrement dependents
@@ -167,7 +170,8 @@ public class ExecutionPlanner {
     }
 
     if (result.size() != stageJobs.size()) {
-       throw new IllegalStateException("cycle detected or missing dependency in stage jobs");
+      throw new IllegalStateException(
+          "cycle detected or missing dependency in stage jobs");
     }
 
     return result;
@@ -181,6 +185,7 @@ public class ExecutionPlanner {
     private final String stageName;
     private final List<Job> jobs;
 
+    /** Creates a stage execution entry. */
     public StageExecution(String stageName, List<Job> jobs) {
       this.stageName = stageName;
       this.jobs = jobs;
@@ -204,6 +209,7 @@ public class ExecutionPlanner {
     private final String stageName;
     private final List<List<Job>> waves;
 
+    /** Creates a wave stage execution entry. */
     public WaveStageExecution(String stageName, List<List<Job>> waves) {
       this.stageName = stageName;
       this.waves = waves;

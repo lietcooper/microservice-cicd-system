@@ -2,11 +2,12 @@ package cicd.api.dto;
 
 import lombok.Data;
 
+/** Request body for pipeline execution. */
 @Data
 public class ExecutePipelineRequest {
-    private String pipelineName;  // Pipeline name to find in repo
-    private String pipelineYaml;  // Raw YAML content (optional, if not using name)
-    private String branch;        // Git branch (optional)
-    private String commit;        // Git commit (optional)
-    private String repoUrl;       // Repository URL (replaces local repoPath)
+  private String pipelineName;
+  private String pipelineYaml;
+  private String branch;
+  private String commit;
+  private String repoUrl;
 }

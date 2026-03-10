@@ -10,9 +10,11 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import org.springframework.stereotype.Service;
 
+/** Handles extraction and cleanup of workspace archives. */
 @Service
 public class WorkspaceArchiveService {
 
+  /** Extracts a zip archive to a temporary directory. */
   public Path extractArchive(byte[] archiveBytes) {
     if (archiveBytes == null || archiveBytes.length == 0) {
       throw new IllegalArgumentException("workspace archive is empty");
@@ -45,6 +47,7 @@ public class WorkspaceArchiveService {
     }
   }
 
+  /** Recursively deletes the workspace directory. */
   public void cleanupWorkspace(Path workspaceDir) {
     if (workspaceDir == null) {
       return;

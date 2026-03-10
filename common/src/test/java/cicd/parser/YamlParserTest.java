@@ -1,22 +1,23 @@
 package cicd.parser;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import cicd.model.Job;
 import cicd.model.Pipeline;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class YamlParserTest {
 
   @TempDir
   Path tmp;
-
-  // ── Happy-path parsing ───────────────────────────────────────────────────────
 
   @Test
   void parseValid() throws IOException {
@@ -38,19 +39,19 @@ class YamlParserTest {
             - ./gradlew test
         """;
 
-    Path f = tmp.resolve("p.yaml");
-    Files.writeString(f, yaml);
+    Path ff = tmp.resolve("p.yaml");
+    Files.writeString(ff, yaml);
 
-    YamlParser parser = new YamlParser(f.toString());
-    Pipeline p = parser.parse();
+    YamlParser parser = new YamlParser(ff.toString());
+    Pipeline pp = parser.parse();
 
     assertTrue(parser.getErrors().isEmpty());
-    assertEquals("test", p.name);
-    assertEquals("a test", p.desc);
-    assertEquals(2, p.stages.size());
-    assertEquals("build", p.stages.get(0));
-    assertEquals("test", p.stages.get(1));
-    assertEquals(2, p.jobs.size());
+    assertEquals("test", pp.name);
+    assertEquals("a test", pp.desc);
+    assertEquals(2, pp.stages.size());
+    assertEquals("build", pp.stages.get(0));
+    assertEquals("test", pp.stages.get(1));
+    assertEquals(2, pp.jobs.size());
   }
 
   @Test
@@ -66,14 +67,14 @@ class YamlParserTest {
           script: echo hello
         """;
 
-    Path f = tmp.resolve("p.yaml");
-    Files.writeString(f, yaml);
+    Path ff = tmp.resolve("p.yaml");
+    Files.writeString(ff, yaml);
 
-    YamlParser parser = new YamlParser(f.toString());
-    Pipeline p = parser.parse();
+    YamlParser parser = new YamlParser(ff.toString());
+    Pipeline pp = parser.parse();
 
     assertTrue(parser.getErrors().isEmpty());
-    Job job = p.jobs.get("compile");
+    Job job = pp.jobs.get("compile");
     assertNotNull(job);
     assertEquals(1, job.script.size());
     assertEquals("echo hello", job.script.get(0));
@@ -95,14 +96,14 @@ class YamlParserTest {
             - echo step3
         """;
 
-    Path f = tmp.resolve("p.yaml");
-    Files.writeString(f, yaml);
+    Path ff = tmp.resolve("p.yaml");
+    Files.writeString(ff, yaml);
 
-    YamlParser parser = new YamlParser(f.toString());
-    Pipeline p = parser.parse();
+    YamlParser parser = new YamlParser(ff.toString());
+    Pipeline pp = parser.parse();
 
     assertTrue(parser.getErrors().isEmpty());
-    Job job = p.jobs.get("compile");
+    Job job = pp.jobs.get("compile");
     assertEquals(3, job.script.size());
     assertEquals("echo step1", job.script.get(0));
     assertEquals("echo step2", job.script.get(1));
@@ -128,15 +129,15 @@ class YamlParserTest {
             - job1
         """;
 
-    Path f = tmp.resolve("p.yaml");
-    Files.writeString(f, yaml);
+    Path ff = tmp.resolve("p.yaml");
+    Files.writeString(ff, yaml);
 
-    YamlParser parser = new YamlParser(f.toString());
-    Pipeline p = parser.parse();
+    YamlParser parser = new YamlParser(ff.toString());
+    Pipeline pp = parser.parse();
 
     assertTrue(parser.getErrors().isEmpty());
-    assertEquals(1, p.jobs.get("job2").needs.size());
-    assertEquals("job1", p.jobs.get("job2").needs.get(0));
+    assertEquals(1, pp.jobs.get("job2").needs.size());
+    assertEquals("job1", pp.jobs.get("job2").needs.get(0));
   }
 
   @Test
@@ -163,16 +164,16 @@ class YamlParserTest {
             - B
         """;
 
-    Path f = tmp.resolve("p.yaml");
-    Files.writeString(f, yaml);
+    Path ff = tmp.resolve("p.yaml");
+    Files.writeString(ff, yaml);
 
-    YamlParser parser = new YamlParser(f.toString());
-    Pipeline p = parser.parse();
+    YamlParser parser = new YamlParser(ff.toString());
+    Pipeline pp = parser.parse();
 
     assertTrue(parser.getErrors().isEmpty());
-    assertEquals(2, p.jobs.get("C").needs.size());
-    assertTrue(p.jobs.get("C").needs.contains("A"));
-    assertTrue(p.jobs.get("C").needs.contains("B"));
+    assertEquals(2, pp.jobs.get("C").needs.size());
+    assertTrue(pp.jobs.get("C").needs.contains("A"));
+    assertTrue(pp.jobs.get("C").needs.contains("B"));
   }
 
   @Test
@@ -188,16 +189,15 @@ class YamlParserTest {
           script: echo
         """;
 
-    Path f = tmp.resolve("p.yaml");
-    Files.writeString(f, yaml);
+    Path ff = tmp.resolve("p.yaml");
+    Files.writeString(ff, yaml);
 
-    YamlParser parser = new YamlParser(f.toString());
-    Pipeline p = parser.parse();
+    YamlParser parser = new YamlParser(ff.toString());
+    Pipeline pp = parser.parse();
 
     assertTrue(parser.getErrors().isEmpty());
-    // nameLine and nameCol are set from the YAML node position
-    assertTrue(p.nameLine > 0);
-    assertTrue(p.nameCol > 0);
+    assertTrue(pp.nameLine > 0);
+    assertTrue(pp.nameCol > 0);
   }
 
   @Test
@@ -213,21 +213,20 @@ class YamlParserTest {
           script: echo
         """;
 
-    Path f = tmp.resolve("p.yaml");
-    Files.writeString(f, yaml);
+    Path ff = tmp.resolve("p.yaml");
+    Files.writeString(ff, yaml);
 
-    YamlParser parser = new YamlParser(f.toString());
-    Pipeline p = parser.parse();
+    YamlParser parser = new YamlParser(ff.toString());
+    Pipeline pp = parser.parse();
 
     assertTrue(parser.getErrors().isEmpty());
-    Job job = p.jobs.get("compile");
+    Job job = pp.jobs.get("compile");
     assertTrue(job.line > 0);
     assertTrue(job.col > 0);
   }
 
   @Test
   void parseJobDefinedAsSequenceOfMappings() throws IOException {
-    // The example in the spec uses list-style job definitions
     String yaml = """
         pipeline:
           name: test
@@ -239,22 +238,21 @@ class YamlParserTest {
           - script: 'gradle build'
         """;
 
-    Path f = tmp.resolve("p.yaml");
-    Files.writeString(f, yaml);
+    Path ff = tmp.resolve("p.yaml");
+    Files.writeString(ff, yaml);
 
-    YamlParser parser = new YamlParser(f.toString());
-    Pipeline p = parser.parse();
+    YamlParser parser = new YamlParser(ff.toString());
+    Pipeline pp = parser.parse();
 
     assertTrue(parser.getErrors().isEmpty());
-    assertNotNull(p.jobs.get("compile"));
-    assertEquals("build", p.jobs.get("compile").stage);
-    assertEquals("gradle:jdk21-corretto", p.jobs.get("compile").image);
+    assertNotNull(pp.jobs.get("compile"));
+    assertEquals("build", pp.jobs.get("compile").stage);
+    assertEquals("gradle:jdk21-corretto",
+        pp.jobs.get("compile").image);
   }
 
   @Test
   void parseDefaultStagesNotInFile() throws IOException {
-    // If stages key is absent, stages list stays empty (default must be
-    // applied by caller)
     String yaml = """
         pipeline:
           name: test
@@ -264,52 +262,50 @@ class YamlParserTest {
           script: echo
         """;
 
-    Path f = tmp.resolve("p.yaml");
-    Files.writeString(f, yaml);
+    Path ff = tmp.resolve("p.yaml");
+    Files.writeString(ff, yaml);
 
-    YamlParser parser = new YamlParser(f.toString());
-    Pipeline p = parser.parse();
+    YamlParser parser = new YamlParser(ff.toString());
+    Pipeline pp = parser.parse();
 
-    // No parse error, but stages list is empty
     assertTrue(parser.getErrors().isEmpty());
-    assertTrue(p.stages.isEmpty());
+    assertTrue(pp.stages.isEmpty());
   }
-
-  // ── Error cases ─────────────────────────────────────────────────────────────
 
   @Test
   void parseNotFound() {
     YamlParser parser = new YamlParser("/no/such/file.yaml");
     parser.parse();
     assertFalse(parser.getErrors().isEmpty());
-    assertTrue(parser.getErrors().get(0).contains("file not found"));
+    assertTrue(
+        parser.getErrors().get(0).contains("file not found"));
   }
 
   @Test
   void parseEmpty() throws IOException {
-    Path f = tmp.resolve("empty.yaml");
-    Files.writeString(f, "");
+    Path ff = tmp.resolve("empty.yaml");
+    Files.writeString(ff, "");
 
-    YamlParser parser = new YamlParser(f.toString());
+    YamlParser parser = new YamlParser(ff.toString());
     parser.parse();
     assertFalse(parser.getErrors().isEmpty());
-    assertTrue(parser.getErrors().get(0).contains("empty or invalid YAML"));
+    assertTrue(parser.getErrors().get(0).contains(
+        "empty or invalid YAML"));
   }
 
   @Test
   void parseScalarRootIsInvalid() throws IOException {
-    Path f = tmp.resolve("scalar.yaml");
-    Files.writeString(f, "just a string");
+    Path ff = tmp.resolve("scalar.yaml");
+    Files.writeString(ff, "just a string");
 
-    YamlParser parser = new YamlParser(f.toString());
-    Pipeline p = parser.parse();
+    YamlParser parser = new YamlParser(ff.toString());
+    Pipeline pp = parser.parse();
     assertFalse(parser.getErrors().isEmpty());
-    assertNull(p);
+    assertNull(pp);
   }
 
   @Test
   void parseIntegerNameError() throws IOException {
-    // pipeline.name must be a string, not an integer
     String yaml = """
         pipeline:
           name: 3
@@ -321,15 +317,15 @@ class YamlParserTest {
           script: echo
         """;
 
-    Path f = tmp.resolve("p.yaml");
-    Files.writeString(f, yaml);
+    Path ff = tmp.resolve("p.yaml");
+    Files.writeString(ff, yaml);
 
-    YamlParser parser = new YamlParser(f.toString());
-    Pipeline p = parser.parse();
+    YamlParser parser = new YamlParser(ff.toString());
+    parser.parse();
 
     assertFalse(parser.getErrors().isEmpty());
     assertTrue(parser.getErrors().stream().anyMatch(
-        e -> e.contains("wrong type") && e.contains("name")));
+        ee -> ee.contains("wrong type") && ee.contains("name")));
   }
 
   @Test
@@ -346,15 +342,15 @@ class YamlParserTest {
           script: echo
         """;
 
-    Path f = tmp.resolve("p.yaml");
-    Files.writeString(f, yaml);
+    Path ff = tmp.resolve("p.yaml");
+    Files.writeString(ff, yaml);
 
-    YamlParser parser = new YamlParser(f.toString());
+    YamlParser parser = new YamlParser(ff.toString());
     parser.parse();
 
     assertFalse(parser.getErrors().isEmpty());
     assertTrue(parser.getErrors().stream().anyMatch(
-        e -> e.contains("description")));
+        ee -> ee.contains("description")));
   }
 
   @Test
@@ -369,15 +365,15 @@ class YamlParserTest {
           script: echo
         """;
 
-    Path f = tmp.resolve("p.yaml");
-    Files.writeString(f, yaml);
+    Path ff = tmp.resolve("p.yaml");
+    Files.writeString(ff, yaml);
 
-    YamlParser parser = new YamlParser(f.toString());
+    YamlParser parser = new YamlParser(ff.toString());
     parser.parse();
 
     assertFalse(parser.getErrors().isEmpty());
     assertTrue(parser.getErrors().stream().anyMatch(
-        e -> e.contains("stages")));
+        ee -> ee.contains("stages")));
   }
 
   @Test
@@ -398,15 +394,15 @@ class YamlParserTest {
           needs: jobA
         """;
 
-    Path f = tmp.resolve("p.yaml");
-    Files.writeString(f, yaml);
+    Path ff = tmp.resolve("p.yaml");
+    Files.writeString(ff, yaml);
 
-    YamlParser parser = new YamlParser(f.toString());
+    YamlParser parser = new YamlParser(ff.toString());
     parser.parse();
 
     assertFalse(parser.getErrors().isEmpty());
     assertTrue(parser.getErrors().stream().anyMatch(
-        e -> e.contains("needs")));
+        ee -> ee.contains("needs")));
   }
 
   @Test
@@ -422,23 +418,20 @@ class YamlParserTest {
           script: echo
         """;
 
-    Path f = tmp.resolve("errfile.yaml");
-    Files.writeString(f, yaml);
+    Path ff = tmp.resolve("errfile.yaml");
+    Files.writeString(ff, yaml);
 
-    YamlParser parser = new YamlParser(f.toString());
+    YamlParser parser = new YamlParser(ff.toString());
     parser.parse();
 
     assertFalse(parser.getErrors().isEmpty());
-    // Error should have format: filename:line:col: message
     String err = parser.getErrors().get(0);
-    assertTrue(err.startsWith(f.toString()));
-    // Should contain colon-separated line:col
+    assertTrue(err.startsWith(ff.toString()));
     assertTrue(err.matches(".+:\\d+:\\d+:.+"));
   }
 
   @Test
   void parseImageAsListError() throws IOException {
-    // Image must be a string, not a list
     String yaml = """
         pipeline:
           name: test
@@ -452,15 +445,15 @@ class YamlParserTest {
           script: echo
         """;
 
-    Path f = tmp.resolve("p.yaml");
-    Files.writeString(f, yaml);
+    Path ff = tmp.resolve("p.yaml");
+    Files.writeString(ff, yaml);
 
-    YamlParser parser = new YamlParser(f.toString());
+    YamlParser parser = new YamlParser(ff.toString());
     parser.parse();
 
     assertFalse(parser.getErrors().isEmpty());
     assertTrue(parser.getErrors().stream().anyMatch(
-        e -> e.contains("image")));
+        ee -> ee.contains("image")));
   }
 
   @Test
@@ -482,14 +475,14 @@ class YamlParserTest {
             - jobA
         """;
 
-    Path f = tmp.resolve("p.yaml");
-    Files.writeString(f, yaml);
+    Path ff = tmp.resolve("p.yaml");
+    Files.writeString(ff, yaml);
 
-    YamlParser parser = new YamlParser(f.toString());
-    Pipeline p = parser.parse();
+    YamlParser parser = new YamlParser(ff.toString());
+    Pipeline pp = parser.parse();
 
     assertTrue(parser.getErrors().isEmpty());
-    Job jobB = p.jobs.get("jobB");
+    Job jobB = pp.jobs.get("jobB");
     assertTrue(jobB.needsLine > 0);
     assertTrue(jobB.needsCol > 0);
   }
@@ -497,13 +490,11 @@ class YamlParserTest {
   @Test
   void getErrorsReturnsEmptyBeforeParse() {
     YamlParser parser = new YamlParser("/any/path.yaml");
-    // Before calling parse(), errors list is empty
     assertTrue(parser.getErrors().isEmpty());
   }
 
   @Test
   void parsePipelineNameAbsent() throws IOException {
-    // Pipeline block with no name key
     String yaml = """
         pipeline:
           description: no name here
@@ -515,13 +506,13 @@ class YamlParserTest {
           script: echo
         """;
 
-    Path f = tmp.resolve("p.yaml");
-    Files.writeString(f, yaml);
+    Path ff = tmp.resolve("p.yaml");
+    Files.writeString(ff, yaml);
 
-    YamlParser parser = new YamlParser(f.toString());
-    Pipeline p = parser.parse();
+    YamlParser parser = new YamlParser(ff.toString());
+    Pipeline pp = parser.parse();
 
     assertTrue(parser.getErrors().isEmpty());
-    assertNull(p.name);
+    assertNull(pp.name);
   }
 }

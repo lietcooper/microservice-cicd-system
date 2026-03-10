@@ -23,6 +23,7 @@ public class StatusUpdateListener {
   private final StageRunRepository stageRunRepo;
   private final JobRunRepository jobRunRepo;
 
+  /** Creates a listener with the required repositories. */
   public StatusUpdateListener(PipelineRunRepository pipelineRunRepo,
       StageRunRepository stageRunRepo, JobRunRepository jobRunRepo) {
     this.pipelineRunRepo = pipelineRunRepo;
@@ -30,6 +31,7 @@ public class StatusUpdateListener {
     this.jobRunRepo = jobRunRepo;
   }
 
+  /** Handles incoming status update messages. */
   @RabbitListener(queues = RabbitMqConfig.STATUS_UPDATE_QUEUE,
       concurrency = "1")
   public void onStatusUpdate(StatusUpdateMessage msg) {
@@ -77,7 +79,6 @@ public class StatusUpdateListener {
         .orElse(null);
 
     if (stageRun == null) {
-      // Create new stage record
       stageRun = new StageRunEntity();
       stageRun.setPipelineRun(pipelineRun);
       stageRun.setStageName(msg.getStageName());
@@ -103,8 +104,10 @@ public class StatusUpdateListener {
         .orElse(null);
 
     if (stageRun == null) {
-      System.err.println("Stage run not found for job update: pipeline="
-          + msg.getPipelineRunId() + " stage=" + msg.getStageName());
+      System.err.println(
+          "Stage run not found for job update: pipeline="
+          + msg.getPipelineRunId()
+          + " stage=" + msg.getStageName());
       return;
     }
 
@@ -113,7 +116,6 @@ public class StatusUpdateListener {
         .orElse(null);
 
     if (jobRun == null) {
-      // Create new job record
       jobRun = new JobRunEntity();
       jobRun.setStageRun(stageRun);
       jobRun.setJobName(msg.getJobName());

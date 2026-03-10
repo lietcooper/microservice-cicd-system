@@ -7,6 +7,7 @@ import cicd.cmd.VerifyCmd;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
+/** CLI entry point for CI/CD pipeline management. */
 @Command(
     name = "cicd",
     description = "CI/CD pipeline management tool",
@@ -21,6 +22,7 @@ import picocli.CommandLine.Command;
 )
 public class App implements Runnable {
 
+  /** Launches the CLI application. */
   public static void main(String[] args) {
     int exitCode = new CommandLine(new App()).execute(args);
     System.exit(exitCode);

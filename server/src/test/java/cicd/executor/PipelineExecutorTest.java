@@ -1,18 +1,19 @@
 package cicd.executor;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import cicd.docker.DockerRunner;
 import cicd.model.Job;
 import cicd.model.Pipeline;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 class PipelineExecutorTest {
 
@@ -82,23 +83,22 @@ class PipelineExecutorTest {
     return pipeline;
   }
 
-  // Mock DockerRunner that always succeeds
   static class AlwaysSuccessRunner implements DockerRunner {
     @Override
-    public JobResult runJob(String image, List<String> script, String repoPath) {
+    public JobResult runJob(String image,
+        List<String> script, String repoPath) {
       return new JobResult("job", 0, "Success output");
     }
   }
 
-  // Mock DockerRunner that always fails
   static class AlwaysFailRunner implements DockerRunner {
     @Override
-    public JobResult runJob(String image, List<String> script, String repoPath) {
+    public JobResult runJob(String image,
+        List<String> script, String repoPath) {
       return new JobResult("job", 1, "Error output");
     }
   }
 
-  // Mock DockerRunner that fails on specific job
   static class FailOnJobRunner implements DockerRunner {
     private final String failJobName;
     private String lastImage;
@@ -108,22 +108,24 @@ class PipelineExecutorTest {
     }
 
     @Override
-    public JobResult runJob(String image, List<String> script, String repoPath) {
+    public JobResult runJob(String image,
+        List<String> script, String repoPath) {
       lastImage = image;
-      // We identify jobs by their image or script content
-      if (script.contains("gradle test") && failJobName.equals("unittest")) {
+      if (script.contains("gradle test")
+          && failJobName.equals("unittest")) {
         return new JobResult(failJobName, 1, "Test failed");
       }
       return new JobResult("job", 0, "Success");
     }
   }
 
-  // Mock DockerRunner that tracks execution order
   static class TrackingRunner implements DockerRunner {
-    private final java.util.List<String> executedImages = new java.util.ArrayList<>();
+    private final java.util.List<String> executedImages =
+        new java.util.ArrayList<>();
 
     @Override
-    public JobResult runJob(String image, List<String> script, String repoPath) {
+    public JobResult runJob(String image,
+        List<String> script, String repoPath) {
       executedImages.add(image);
       return new JobResult("job", 0, "ok");
     }
@@ -136,7 +138,8 @@ class PipelineExecutorTest {
   @Test
   void testAllJobsPass() {
     Pipeline pipeline = createSimplePipeline();
-    PipelineExecutor executor = new PipelineExecutor(new AlwaysSuccessRunner(), "/tmp/repo");
+    PipelineExecutor executor = new PipelineExecutor(
+        new AlwaysSuccessRunner(), "/tmp/repo");
 
     boolean result = executor.execute(pipeline);
 
@@ -151,7 +154,8 @@ class PipelineExecutorTest {
   @Test
   void testFirstJobFails() {
     Pipeline pipeline = createSimplePipeline();
-    PipelineExecutor executor = new PipelineExecutor(new AlwaysFailRunner(), "/tmp/repo");
+    PipelineExecutor executor = new PipelineExecutor(
+        new AlwaysFailRunner(), "/tmp/repo");
 
     boolean result = executor.execute(pipeline);
 
@@ -169,20 +173,21 @@ class PipelineExecutorTest {
       private int callCount = 0;
 
       @Override
-      public JobResult runJob(String image, List<String> script, String repoPath) {
+      public JobResult runJob(String image,
+          List<String> script, String repoPath) {
         callCount++;
-        if (callCount == 2) { // Fail on second job (unittest)
+        if (callCount == 2) {
           return new JobResult("unittest", 1, "Test failed");
         }
         return new JobResult("job", 0, "ok");
       }
     };
 
-    PipelineExecutor executor = new PipelineExecutor(tracker, "/tmp/repo");
+    PipelineExecutor executor =
+        new PipelineExecutor(tracker, "/tmp/repo");
     boolean result = executor.execute(pipeline);
 
     assertFalse(result);
-    // Pipeline should stop, deploy job should NOT run
     tearDown();
     String output = outContent.toString();
     assertFalse(output.contains("Stage: deploy"));
@@ -193,11 +198,11 @@ class PipelineExecutorTest {
     Pipeline pipeline = createMultiStagePipeline();
     TrackingRunner tracker = new TrackingRunner();
 
-    PipelineExecutor executor = new PipelineExecutor(tracker, "/tmp/repo");
+    PipelineExecutor executor =
+        new PipelineExecutor(tracker, "/tmp/repo");
     boolean result = executor.execute(pipeline);
 
     assertTrue(result);
-    // All 3 jobs should have been executed
     assertEquals(3, tracker.getExecutedImages().size());
     tearDown();
     String output = outContent.toString();
@@ -211,7 +216,8 @@ class PipelineExecutorTest {
     Pipeline pipeline = createSimplePipeline();
     pipeline.name = "my-custom-pipeline";
 
-    PipelineExecutor executor = new PipelineExecutor(new AlwaysSuccessRunner(), "/tmp/repo");
+    PipelineExecutor executor = new PipelineExecutor(
+        new AlwaysSuccessRunner(), "/tmp/repo");
     executor.execute(pipeline);
 
     tearDown();
@@ -225,7 +231,8 @@ class PipelineExecutorTest {
         new JobResult("job", 0, "Line 1\nLine 2\nLine 3");
 
     Pipeline pipeline = createSimplePipeline();
-    PipelineExecutor executor = new PipelineExecutor(runner, "/tmp/repo");
+    PipelineExecutor executor =
+        new PipelineExecutor(runner, "/tmp/repo");
     executor.execute(pipeline);
 
     tearDown();
@@ -241,7 +248,8 @@ class PipelineExecutorTest {
         new JobResult("job", 0, "");
 
     Pipeline pipeline = createSimplePipeline();
-    PipelineExecutor executor = new PipelineExecutor(runner, "/tmp/repo");
+    PipelineExecutor executor =
+        new PipelineExecutor(runner, "/tmp/repo");
 
     boolean result = executor.execute(pipeline);
 
@@ -257,7 +265,8 @@ class PipelineExecutorTest {
         new JobResult("job", 0, null);
 
     Pipeline pipeline = createSimplePipeline();
-    PipelineExecutor executor = new PipelineExecutor(runner, "/tmp/repo");
+    PipelineExecutor executor =
+        new PipelineExecutor(runner, "/tmp/repo");
 
     boolean result = executor.execute(pipeline);
 
@@ -271,7 +280,6 @@ class PipelineExecutorTest {
     pipeline.stages = Arrays.asList("build");
     pipeline.jobs = new LinkedHashMap<>();
 
-    // Add jobB first (which needs jobA)
     Job jobB = new Job();
     jobB.name = "jobB";
     jobB.stage = "build";
@@ -280,7 +288,6 @@ class PipelineExecutorTest {
     jobB.needs = Arrays.asList("jobA");
     pipeline.jobs.put("jobB", jobB);
 
-    // Add jobA second
     Job jobA = new Job();
     jobA.name = "jobA";
     jobA.stage = "build";
@@ -289,12 +296,12 @@ class PipelineExecutorTest {
     pipeline.jobs.put("jobA", jobA);
 
     TrackingRunner tracker = new TrackingRunner();
-    PipelineExecutor executor = new PipelineExecutor(tracker, "/tmp/repo");
+    PipelineExecutor executor =
+        new PipelineExecutor(tracker, "/tmp/repo");
     executor.execute(pipeline);
 
     List<String> order = tracker.getExecutedImages();
     assertEquals(2, order.size());
-    // jobA must run before jobB despite definition order
     assertEquals("alpine:A", order.get(0));
     assertEquals("alpine:B", order.get(1));
   }

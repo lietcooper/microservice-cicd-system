@@ -16,58 +16,70 @@ import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/** RabbitMQ exchanges, queues, bindings, and converter config. */
 @Configuration
 public class RabbitMqConfig {
 
   // Exchange names
-  public static final String PIPELINE_EXCHANGE = "cicd.pipeline.direct";
+  public static final String PIPELINE_EXCHANGE =
+      "cicd.pipeline.direct";
   public static final String JOB_EXCHANGE = "cicd.job.direct";
-  public static final String JOB_RESULTS_EXCHANGE = "cicd.job-results.direct";
+  public static final String JOB_RESULTS_EXCHANGE =
+      "cicd.job-results.direct";
   public static final String STATUS_EXCHANGE = "cicd.status.direct";
   public static final String EVENTS_EXCHANGE = "cicd.events.topic";
   public static final String DLX_EXCHANGE = "cicd.dlx";
 
   // Queue names
-  public static final String PIPELINE_EXECUTE_QUEUE = "cicd.pipeline.execute";
+  public static final String PIPELINE_EXECUTE_QUEUE =
+      "cicd.pipeline.execute";
   public static final String JOB_EXECUTE_QUEUE = "cicd.job.execute";
   public static final String JOB_RESULTS_QUEUE = "cicd.job.results";
-  public static final String STATUS_UPDATE_QUEUE = "cicd.status.update";
+  public static final String STATUS_UPDATE_QUEUE =
+      "cicd.status.update";
   public static final String EVENTS_QUEUE = "cicd.events";
   public static final String DEAD_LETTER_QUEUE = "cicd.dead-letters";
 
   // Routing keys
-  public static final String PIPELINE_EXECUTE_KEY = "pipeline.execute";
+  public static final String PIPELINE_EXECUTE_KEY =
+      "pipeline.execute";
   public static final String JOB_EXECUTE_KEY = "job.execute";
   public static final String JOB_RESULT_KEY = "job.result";
   public static final String STATUS_UPDATE_KEY = "status.update";
 
   // --- Exchanges ---
 
+  /** Creates the pipeline direct exchange. */
   @Bean
   public DirectExchange pipelineExchange() {
     return new DirectExchange(PIPELINE_EXCHANGE, true, false);
   }
 
+  /** Creates the job direct exchange. */
   @Bean
   public DirectExchange jobExchange() {
     return new DirectExchange(JOB_EXCHANGE, true, false);
   }
 
+  /** Creates the job results direct exchange. */
   @Bean
   public DirectExchange jobResultsExchange() {
     return new DirectExchange(JOB_RESULTS_EXCHANGE, true, false);
   }
 
+  /** Creates the status direct exchange. */
   @Bean
   public DirectExchange statusExchange() {
     return new DirectExchange(STATUS_EXCHANGE, true, false);
   }
 
+  /** Creates the events topic exchange. */
   @Bean
   public TopicExchange eventsExchange() {
     return new TopicExchange(EVENTS_EXCHANGE, true, false);
   }
 
+  /** Creates the dead-letter exchange. */
   @Bean
   public DirectExchange dlxExchange() {
     return new DirectExchange(DLX_EXCHANGE, true, false);
@@ -75,6 +87,7 @@ public class RabbitMqConfig {
 
   // --- Queues ---
 
+  /** Creates the pipeline execute queue with DLX. */
   @Bean
   public Queue pipelineExecuteQueue() {
     return QueueBuilder.durable(PIPELINE_EXECUTE_QUEUE)
@@ -82,6 +95,7 @@ public class RabbitMqConfig {
         .build();
   }
 
+  /** Creates the job execute queue with DLX. */
   @Bean
   public Queue jobExecuteQueue() {
     return QueueBuilder.durable(JOB_EXECUTE_QUEUE)
@@ -89,11 +103,13 @@ public class RabbitMqConfig {
         .build();
   }
 
+  /** Creates the job results queue. */
   @Bean
   public Queue jobResultsQueue() {
     return QueueBuilder.durable(JOB_RESULTS_QUEUE).build();
   }
 
+  /** Creates the status update queue with DLX. */
   @Bean
   public Queue statusUpdateQueue() {
     return QueueBuilder.durable(STATUS_UPDATE_QUEUE)
@@ -101,11 +117,13 @@ public class RabbitMqConfig {
         .build();
   }
 
+  /** Creates the events queue. */
   @Bean
   public Queue eventsQueue() {
     return QueueBuilder.durable(EVENTS_QUEUE).build();
   }
 
+  /** Creates the dead-letter queue. */
   @Bean
   public Queue deadLetterQueue() {
     return QueueBuilder.durable(DEAD_LETTER_QUEUE).build();
@@ -113,36 +131,42 @@ public class RabbitMqConfig {
 
   // --- Bindings ---
 
+  /** Binds pipeline execute queue to pipeline exchange. */
   @Bean
   public Binding pipelineExecuteBinding() {
     return BindingBuilder.bind(pipelineExecuteQueue())
         .to(pipelineExchange()).with(PIPELINE_EXECUTE_KEY);
   }
 
+  /** Binds job execute queue to job exchange. */
   @Bean
   public Binding jobExecuteBinding() {
     return BindingBuilder.bind(jobExecuteQueue())
         .to(jobExchange()).with(JOB_EXECUTE_KEY);
   }
 
+  /** Binds job results queue to job results exchange. */
   @Bean
   public Binding jobResultsBinding() {
     return BindingBuilder.bind(jobResultsQueue())
         .to(jobResultsExchange()).with(JOB_RESULT_KEY);
   }
 
+  /** Binds status update queue to status exchange. */
   @Bean
   public Binding statusUpdateBinding() {
     return BindingBuilder.bind(statusUpdateQueue())
         .to(statusExchange()).with(STATUS_UPDATE_KEY);
   }
 
+  /** Binds events queue to events exchange. */
   @Bean
   public Binding eventsBinding() {
     return BindingBuilder.bind(eventsQueue())
         .to(eventsExchange()).with("#");
   }
 
+  /** Binds dead-letter queue to DLX exchange. */
   @Bean
   public Binding deadLetterBinding() {
     return BindingBuilder.bind(deadLetterQueue())
@@ -151,6 +175,7 @@ public class RabbitMqConfig {
 
   // --- Message converter ---
 
+  /** Creates a Jackson JSON message converter. */
   @Bean
   public MessageConverter jsonMessageConverter() {
     ObjectMapper mapper = new ObjectMapper();
@@ -158,16 +183,21 @@ public class RabbitMqConfig {
     return new Jackson2JsonMessageConverter(mapper);
   }
 
+  /** Creates a RabbitTemplate with JSON converter. */
   @Bean
-  public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory,
+  public RabbitTemplate rabbitTemplate(
+      ConnectionFactory connectionFactory,
       MessageConverter jsonMessageConverter) {
-    RabbitTemplate template = new RabbitTemplate(connectionFactory);
+    RabbitTemplate template =
+        new RabbitTemplate(connectionFactory);
     template.setMessageConverter(jsonMessageConverter);
     return template;
   }
 
+  /** Creates a listener container factory with JSON converter. */
   @Bean
-  public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
+  public SimpleRabbitListenerContainerFactory
+      rabbitListenerContainerFactory(
       ConnectionFactory connectionFactory,
       MessageConverter jsonMessageConverter) {
     SimpleRabbitListenerContainerFactory factory =

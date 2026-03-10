@@ -38,7 +38,7 @@ public class LocalDockerRunner implements DockerRunner {
         .dockerHost(config.getDockerHost())
         .build();
     this.dockerClient = DockerClientImpl.getInstance(config, httpClient);
-}
+  }
 
   /** Creates a runner with a provided DockerClient (for testing). */
   LocalDockerRunner(DockerClient dockerClient) {
