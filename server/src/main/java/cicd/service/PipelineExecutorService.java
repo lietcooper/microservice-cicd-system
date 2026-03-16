@@ -14,7 +14,9 @@ import cicd.persistence.repository.PipelineRunRepository;
 import cicd.persistence.repository.StageRunRepository;
 import cicd.util.GitHelper;
 import java.time.OffsetDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -85,14 +87,37 @@ public class PipelineExecutorService {
       stageRunRepo.flush();
 
       boolean stageFailed = false;
+      Set<String> failedRequiredJobs = new HashSet<>();
 
       for (Job job : stage.getJobs()) {
+        // Skip jobs blocked by a failed required dependency
+        boolean blocked = job.needs.stream()
+            .anyMatch(failedRequiredJobs::contains);
+        if (blocked) {
+          JobRunEntity jobRun = new JobRunEntity();
+          jobRun.setStageRun(stageRun);
+          jobRun.setJobName(job.name);
+          jobRun.setAllowFailure(job.allowFailure);
+          jobRun.setStatus(RunStatus.FAILED);
+          jobRun.setStartTime(OffsetDateTime.now());
+          jobRun.setEndTime(OffsetDateTime.now());
+          jobRunRepo.save(jobRun);
+          jobRunRepo.flush();
+          if (!job.allowFailure) {
+            failedRequiredJobs.add(job.name);
+          }
+          System.out.println("  > Skipped job: " + job.name
+              + " (blocked by failed dependency)");
+          continue;
+        }
+
         System.out.println(
             "  > Job: " + job.name + " [" + job.image + "]");
 
         JobRunEntity jobRun = new JobRunEntity();
         jobRun.setStageRun(stageRun);
         jobRun.setJobName(job.name);
+        jobRun.setAllowFailure(job.allowFailure);
         jobRun.setStatus(RunStatus.RUNNING);
         jobRun.setStartTime(OffsetDateTime.now());
         jobRun = jobRunRepo.save(jobRun);
@@ -116,15 +141,14 @@ public class PipelineExecutorService {
           jobRun.setStatus(RunStatus.FAILED);
           System.err.println("  x Job '" + job.name
               + "' failed (exit " + result.exitCode() + ")");
-          stageFailed = true;
-          pipelineFailed = true;
+          if (!job.allowFailure) {
+            failedRequiredJobs.add(job.name);
+            stageFailed = true;
+            pipelineFailed = true;
+          }
         }
         jobRunRepo.save(jobRun);
         jobRunRepo.flush();
-
-        if (stageFailed) {
-          break;
-        }
       }
 
       stageRun.setEndTime(OffsetDateTime.now());

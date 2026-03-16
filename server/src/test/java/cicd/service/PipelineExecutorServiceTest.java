@@ -165,8 +165,39 @@ class PipelineExecutorServiceTest {
   }
 
   @Test
-  void executePipelineWithFailingJobStopsRemainingJobs() {
-    // Two jobs in same stage; first fails; second should not be executed
+  void executePipelineWithFailingJobStopsDependentJobs() {
+    // Two jobs in same stage; first fails; second depends on first
+    Pipeline pipeline = new Pipeline();
+    pipeline.name = "default";
+    pipeline.stages = List.of("build");
+
+    Job job1 = new Job();
+    job1.name = "job1";
+    job1.stage = "build";
+    job1.image = "alpine";
+    job1.script = List.of("echo fail");
+    pipeline.jobs.put("job1", job1);
+
+    Job job2 = new Job();
+    job2.name = "job2";
+    job2.stage = "build";
+    job2.image = "alpine";
+    job2.script = List.of("echo ok");
+    job2.needs = List.of("job1");
+    pipeline.jobs.put("job2", job2);
+
+    when(dockerRunner.runJob(anyString(), any(), anyString()))
+        .thenReturn(new JobResult("job1", 1, "fail"));
+
+    service.executePipeline(pipeline, "/repo", "main", "abc");
+
+    // Docker should only be called once because job2 depends on failed job1
+    verify(dockerRunner, times(1)).runJob(anyString(), any(), anyString());
+  }
+
+  @Test
+  void executePipelineWithFailingJobRunsIndependentJobs() {
+    // Two jobs in same stage; first fails; second has no dependency
     Pipeline pipeline = new Pipeline();
     pipeline.name = "default";
     pipeline.stages = List.of("build");
@@ -185,15 +216,14 @@ class PipelineExecutorServiceTest {
     job2.script = List.of("echo ok");
     pipeline.jobs.put("job2", job2);
 
-    // Only first call fails; second would return success
     when(dockerRunner.runJob(anyString(), any(), anyString()))
         .thenReturn(new JobResult("job1", 1, "fail"))
         .thenReturn(new JobResult("job2", 0, "ok"));
 
     service.executePipeline(pipeline, "/repo", "main", "abc");
 
-    // Docker should only be called once because job1 fails and we stop
-    verify(dockerRunner, times(1)).runJob(anyString(), any(), anyString());
+    // Docker should be called twice; job2 has no dependency on job1
+    verify(dockerRunner, times(2)).runJob(anyString(), any(), anyString());
   }
 
   @Test

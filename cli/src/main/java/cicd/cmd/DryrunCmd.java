@@ -77,6 +77,7 @@ public class DryrunCmd implements Callable<Integer> {
         for (String cmd : job.script) {
           sb.append("        - ").append(cmd).append("\n");
         }
+        sb.append("        failures: ").append(job.allowFailure).append("\n");
       }
     }
 

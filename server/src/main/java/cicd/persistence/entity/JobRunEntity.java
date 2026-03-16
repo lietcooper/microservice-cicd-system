@@ -42,4 +42,7 @@ public class JobRunEntity {
 
   @Column(name = "end_time")
   private OffsetDateTime endTime;
+
+  @Column(name = "allow_failure", nullable = false)
+  private boolean allowFailure = false;
 }

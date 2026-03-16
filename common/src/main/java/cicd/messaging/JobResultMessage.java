@@ -21,5 +21,6 @@ public class JobResultMessage {
   private boolean success;
   private int exitCode;
   private String output;
+  private boolean allowFailure;
 
 }

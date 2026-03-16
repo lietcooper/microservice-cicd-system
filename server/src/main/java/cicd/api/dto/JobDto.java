@@ -16,4 +16,7 @@ public class JobDto {
 
   @JsonProperty("end")
   private OffsetDateTime endTime;
+
+  @JsonProperty("failures")
+  private boolean failures;
 }

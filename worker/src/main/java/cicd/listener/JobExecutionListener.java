@@ -75,6 +75,7 @@ public class JobExecutionListener {
     resultMsg.setSuccess(result.ok());
     resultMsg.setExitCode(result.exitCode());
     resultMsg.setOutput(result.output());
+    resultMsg.setAllowFailure(msg.isAllowFailure());
 
     rabbitTemplate.convertAndSend(
         RabbitMqConfig.JOB_RESULTS_EXCHANGE,

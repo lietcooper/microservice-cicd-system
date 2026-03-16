@@ -83,12 +83,13 @@ public class StatusUpdatePublisher {
   /** Publishes a job-created status update. */
   public void jobCreated(Long pipelineRunId,
       String pipelineName, int runNo, String stageName,
-      String jobName) {
+      String jobName, boolean allowFailure) {
     StatusUpdateMessage msg = buildJob(
         pipelineRunId, pipelineName, runNo,
         stageName, jobName);
     msg.setStatus("PENDING");
     msg.setStartTime(OffsetDateTime.now());
+    msg.setAllowFailure(allowFailure);
     publish(msg);
   }
 
