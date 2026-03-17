@@ -149,7 +149,7 @@ class StatusUpdatePublisherTest {
   @Test
   void jobCreatedPublishesEntityTypeJobWithPendingStatus() {
     publisher.jobCreated(
-        1L, "pipe", 1, "build", "compile");
+        1L, "pipe", 1, "build", "compile", false);
 
     ArgumentCaptor<StatusUpdateMessage> captor =
         ArgumentCaptor.forClass(StatusUpdateMessage.class);
@@ -218,7 +218,7 @@ class StatusUpdatePublisherTest {
     publisher.pipelineRunning(1L, "p", 1);
     publisher.stageStarted(1L, "p", 1, "build", 0);
     publisher.jobCreated(
-        1L, "p", 1, "build", "compile");
+        1L, "p", 1, "build", "compile", false);
 
     verify(rabbitTemplate, times(3))
         .convertAndSend(anyString(), anyString(),

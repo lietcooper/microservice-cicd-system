@@ -42,4 +42,6 @@ public class StatusUpdateMessage {
       pattern = "yyyy-MM-dd'T'HH:mm:ssXXX")
   private OffsetDateTime endTime;
 
+  private Boolean allowFailure;
+
 }

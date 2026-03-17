@@ -12,6 +12,7 @@ public class Job {
   public List<String> script = new ArrayList<>();
   public List<String> needs = new ArrayList<>();
   public boolean needsExplicitlyDefined = false;
+  public boolean allowFailure = false;
 
   public int line = -1;
   public int col = -1;

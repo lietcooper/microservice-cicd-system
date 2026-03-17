@@ -14,7 +14,9 @@ import cicd.service.WorkspaceArchiveService;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -95,15 +97,43 @@ public class PipelineOrchestrationListener {
             msg.getPipelineName(), msg.getRunNo(), stage.getStageName());
 
         boolean stageFailed = false;
+        Set<String> failedRequiredJobs = new HashSet<>();
 
         for (List<Job> wave : stage.getWaves()) {
-          String correlationId = UUID.randomUUID().toString();
-          coordinator.registerWave(correlationId, wave.size());
-
+          // Filter jobs: skip those whose needs include a failed required job
+          List<Job> runnableJobs = new java.util.ArrayList<>();
           for (Job job : wave) {
+            boolean blocked = job.needs.stream()
+                .anyMatch(failedRequiredJobs::contains);
+            if (blocked) {
+              // Mark skipped job as FAILED
+              statusPublisher.jobCreated(msg.getPipelineRunId(),
+                  msg.getPipelineName(), msg.getRunNo(),
+                  stage.getStageName(), job.name, job.allowFailure);
+              statusPublisher.jobCompleted(msg.getPipelineRunId(),
+                  msg.getPipelineName(), msg.getRunNo(),
+                  stage.getStageName(), job.name, false);
+              if (!job.allowFailure) {
+                failedRequiredJobs.add(job.name);
+              }
+              System.out.println("  > Skipped job: " + job.name
+                  + " (blocked by failed dependency)");
+            } else {
+              runnableJobs.add(job);
+            }
+          }
+
+          if (runnableJobs.isEmpty()) {
+            continue;
+          }
+
+          String correlationId = UUID.randomUUID().toString();
+          coordinator.registerWave(correlationId, runnableJobs.size());
+
+          for (Job job : runnableJobs) {
             statusPublisher.jobCreated(msg.getPipelineRunId(),
                 msg.getPipelineName(), msg.getRunNo(),
-                stage.getStageName(), job.name);
+                stage.getStageName(), job.name, job.allowFailure);
 
             JobExecuteMessage jobMsg = new JobExecuteMessage();
             jobMsg.setPipelineRunId(msg.getPipelineRunId());
@@ -114,8 +144,9 @@ public class PipelineOrchestrationListener {
             jobMsg.setImage(job.image);
             jobMsg.setScripts(job.script);
             jobMsg.setWorkspacePath(workspacePath.toString());
-            jobMsg.setTotalJobsInWave(wave.size());
+            jobMsg.setTotalJobsInWave(runnableJobs.size());
             jobMsg.setRunNo(msg.getRunNo());
+            jobMsg.setAllowFailure(job.allowFailure);
 
             rabbitTemplate.convertAndSend(
                 RabbitMqConfig.JOB_EXCHANGE,
@@ -130,13 +161,30 @@ public class PipelineOrchestrationListener {
               coordinator.awaitWave(correlationId);
           coordinator.removeWave(correlationId);
 
-          if (tracker == null || !tracker.allSucceeded()) {
+          if (tracker == null || tracker.isTimedOut()) {
             stageFailed = true;
             pipelineFailed = true;
             if (tracker != null && tracker.isTimedOut()) {
               System.err.println("  x Wave timed out in stage '"
                   + stage.getStageName() + "'");
             }
+            break;
+          }
+
+          // Process results: only required job failures affect stage status
+          for (cicd.messaging.JobResultMessage result
+              : tracker.getResults()) {
+            if (!result.isSuccess()) {
+              if (!result.isAllowFailure()) {
+                failedRequiredJobs.add(result.getJobName());
+                stageFailed = true;
+                pipelineFailed = true;
+              }
+            }
+          }
+
+          // If a required job failed, break wave loop for this stage
+          if (stageFailed) {
             break;
           }
         }

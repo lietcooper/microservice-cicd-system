@@ -144,7 +144,8 @@ class PipelineOrchestrationListenerTest {
     listener.onPipelineExecute(msg);
 
     verify(statusPublisher).jobCreated(
-        eq(1L), eq("default"), eq(1), eq("build"), eq("compile"));
+        eq(1L), eq("default"), eq(1), eq("build"), eq("compile"),
+        eq(false));
   }
 
   @Test

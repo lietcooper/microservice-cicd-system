@@ -49,6 +49,7 @@ class DryrunCmdTest {
                 image: gradle:jdk17
                 script:
                 - ./gradlew build
+                failures: false
         """;
 
     assertEquals(expected.stripIndent(), output);
@@ -98,20 +99,24 @@ class DryrunCmdTest {
                 image: gradle:jdk17
                 script:
                 - ./gradlew classes
+                failures: false
         test:
             unittest:
                 image: gradle:jdk17
                 script:
                 - ./gradlew test
+                failures: false
             reports:
                 image: gradle:jdk17
                 script:
                 - ./gradlew check
+                failures: false
         docs:
             javadoc:
                 image: gradle:jdk17
                 script:
                 - ./gradlew javadoc
+                failures: false
         """;
 
     assertEquals(expected.stripIndent(), output);
@@ -143,6 +148,7 @@ class DryrunCmdTest {
                 - gradle checkstyleMain
                 - gradle checkstyleTest
                 - gradle spotbugsMain
+                failures: false
         """;
 
     assertEquals(expected.stripIndent(), output);
@@ -181,10 +187,12 @@ class DryrunCmdTest {
                 image: alpine
                 script:
                 - echo 1
+                failures: false
             job2:
                 image: alpine
                 script:
                 - echo 2
+                failures: false
         """;
 
     assertEquals(expected.stripIndent(), output);
@@ -231,14 +239,17 @@ class DryrunCmdTest {
                 image: alpine
                 script:
                 - echo 1
+                failures: false
             job2:
                 image: alpine
                 script:
                 - echo 2
+                failures: false
             job3:
                 image: alpine
                 script:
                 - echo 3
+                failures: false
         """;
 
     assertEquals(expected.stripIndent(), output);

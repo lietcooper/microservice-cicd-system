@@ -24,5 +24,6 @@ public class JobExecuteMessage {
   private List<String> scripts;
   private String workspacePath;
   private int totalJobsInWave;
+  private boolean allowFailure;
 
 }

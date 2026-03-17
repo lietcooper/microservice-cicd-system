@@ -201,6 +201,28 @@ public class YamlParser {
       jj.needsExplicitlyDefined = true;
       jj.needsLine = val.getStartMark().getLine() + 1;
       jj.needsCol = val.getStartMark().getColumn() + 1;
+    } else if ("failures".equals(key)) {
+      parseBooleanField(jj, val);
+    }
+  }
+
+  private void parseBooleanField(Job jj, Node val) {
+    if (val instanceof ScalarNode) {
+      ScalarNode scalar = (ScalarNode) val;
+      String tag = scalar.getTag().getValue();
+      if (tag.contains("bool")) {
+        jj.allowFailure = "true".equalsIgnoreCase(scalar.getValue());
+      } else {
+        err(val,
+            "wrong type of value given for `failures` key."
+                + " Expected value of type Boolean, given "
+                + scalar.getValue());
+      }
+    } else {
+      err(val,
+          "wrong type of value given for `failures` key."
+              + " Expected value of type Boolean, given "
+              + nodeType(val));
     }
   }
 

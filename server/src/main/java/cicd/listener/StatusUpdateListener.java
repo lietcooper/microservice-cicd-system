@@ -128,6 +128,9 @@ public class StatusUpdateListener {
     if (msg.getEndTime() != null) {
       jobRun.setEndTime(msg.getEndTime());
     }
+    if (msg.getAllowFailure() != null) {
+      jobRun.setAllowFailure(msg.getAllowFailure());
+    }
     jobRunRepo.save(jobRun);
     jobRunRepo.flush();
   }

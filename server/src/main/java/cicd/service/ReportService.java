@@ -210,6 +210,7 @@ public class ReportService {
     dto.setStatus(entity.getStatus().toString());
     dto.setStartTime(entity.getStartTime());
     dto.setEndTime(entity.getEndTime());
+    dto.setFailures(entity.isAllowFailure());
     return dto;
   }
 }
