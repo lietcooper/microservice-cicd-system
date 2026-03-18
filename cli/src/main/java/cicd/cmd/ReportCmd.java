@@ -164,6 +164,7 @@ public class ReportCmd implements Callable<Integer> {
         System.out.println("    jobs:");
         for (JsonNode jb : jobs) {
           System.out.println("      - name: " + text(jb, "name"));
+          System.out.println("        failures: " + jb.path("failures").asBoolean(false));
           System.out.println("        status: " + text(jb, "status"));
           System.out.println("        start: " + text(jb, "start"));
           System.out.println("        end: " + text(jb, "end"));
