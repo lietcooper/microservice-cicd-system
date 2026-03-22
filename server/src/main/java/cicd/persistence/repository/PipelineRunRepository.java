@@ -24,4 +24,12 @@ public interface PipelineRunRepository
       + "FROM PipelineRunEntity pr "
       + "WHERE pr.pipelineName = :name")
   int nextRunNo(@Param("name") String pipelineName);
+
+  /** Returns runs for a repo that are currently running. */
+  List<PipelineRunEntity> findByGitRepoAndStatus(
+      String gitRepo, cicd.persistence.entity.RunStatus status);
+
+  /** Returns all runs for a repo ordered by run number desc. */
+  List<PipelineRunEntity> findByGitRepoOrderByRunNoDesc(
+      String gitRepo);
 }
