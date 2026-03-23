@@ -1,0 +1,61 @@
+# =============================================================
+# Server (Spring Boot REST API, port 8080)
+# =============================================================
+server:
+  image:
+    repository: cicd-server
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 8080
+  service:
+    type: ClusterIP
+    port: 8080
+
+# =============================================================
+# Worker (Spring Boot RabbitMQ consumer, port 8081)
+# =============================================================
+worker:
+  image:
+    repository: cicd-worker
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 8081
+  service:
+    type: ClusterIP
+    port: 8081
+
+# =============================================================
+# PostgreSQL  (set enabled: false to use an external instance)
+# =============================================================
+postgresql:
+  enabled: true
+  image:
+    repository: postgres
+    tag: 16-alpine
+  database: cicd
+  username: cicd
+  password: cicd
+  storage: 5Gi
+  # Used only when enabled: false — full JDBC URL to external DB
+  externalUrl: ""   # e.g. jdbc:postgresql://my-db.example.com:5432/cicd
+  externalUsername: cicd
+  externalPassword: ""
+
+# =============================================================
+# RabbitMQ  (set enabled: false to use an external broker)
+# =============================================================
+rabbitmq:
+  enabled: true
+  image:
+    repository: rabbitmq
+    tag: 3.13-management-alpine
+  username: cicd
+  password: cicd
+  storage: 2Gi
+  # Used only when enabled: false
+  externalHost: ""   # e.g. my-rmq.example.com
+  externalPort: 5672
+  externalUsername: cicd
+  externalPassword: ""
