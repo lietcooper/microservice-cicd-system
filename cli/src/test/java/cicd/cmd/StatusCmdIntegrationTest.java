@@ -96,6 +96,46 @@ class StatusCmdIntegrationTest {
   }
 
   @Test
+  void repoQueryShowsStagesAndJobs() {
+    server.enqueue(new MockResponse()
+        .addHeader("Content-Type", "application/json")
+        .setBody("[{"
+            + "\"pipeline-name\":\"default\","
+            + "\"run-no\":1,"
+            + "\"status\":\"Success\","
+            + "\"git-repo\":\"https://github.com/example/repo.git\","
+            + "\"git-branch\":\"main\","
+            + "\"git-hash\":\"abc1234\","
+            + "\"start\":\"2025-08-29T16:17:52-07:00\","
+            + "\"end\":\"2025-08-29T16:21:32-07:00\","
+            + "\"stages\":[{"
+            + "  \"name\":\"build\","
+            + "  \"status\":\"Success\","
+            + "  \"start\":\"2025-08-29T16:18:05-07:00\","
+            + "  \"end\":\"2025-08-29T16:19:32-07:00\","
+            + "  \"jobs\":[{"
+            + "    \"name\":\"compile\","
+            + "    \"status\":\"Success\","
+            + "    \"start\":\"2025-08-29T16:18:05-07:00\","
+            + "    \"end\":\"2025-08-29T16:19:32-07:00\""
+            + "  }]"
+            + "}]"
+            + "}]"));
+
+    int code = new CommandLine(new StatusCmd()).execute(
+        "--repo", "https://github.com/example/repo.git",
+        "--server", serverUrl);
+
+    assertEquals(0, code);
+    String out = outContent.toString();
+    assertTrue(out.contains("pipeline: default"));
+    assertTrue(out.contains("  build:"));
+    assertTrue(out.contains("      status: Success"));
+    assertTrue(out.contains("      compile:"));
+    assertTrue(out.contains("          status: Success"));
+  }
+
+  @Test
   void repoQueryEmptyArrayPrintsNoRuns() {
     server.enqueue(new MockResponse()
         .addHeader("Content-Type", "application/json")

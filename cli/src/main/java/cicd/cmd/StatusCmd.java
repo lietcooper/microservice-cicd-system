@@ -149,7 +149,7 @@ public class StatusCmd implements Callable<Integer> {
   }
 
   private void printRepoStatus(JsonNode json) {
-    if (!json.isArray()) {
+    if (!json.isArray() || json.isEmpty()) {
       System.out.println("(no runs found)");
       return;
     }
@@ -159,25 +159,30 @@ public class StatusCmd implements Callable<Integer> {
       System.out.println("  status: " + text(run, "status"));
       System.out.println("  git-branch: " + text(run, "git-branch"));
       System.out.println("  git-hash: " + text(run, "git-hash"));
+      printStagesAndJobs(run, "  ");
     }
   }
 
   private void printRunStatus(JsonNode json) {
+    printStagesAndJobs(json, "");
+  }
+
+  private void printStagesAndJobs(JsonNode json, String indent) {
     JsonNode stages = json.path("stages");
-    if (stages.isMissingNode() || !stages.isArray()) {
-      System.out.println("(no stages found)");
+    if (stages.isMissingNode() || !stages.isArray() || stages.isEmpty()) {
       return;
     }
 
     for (JsonNode stage : stages) {
-      System.out.println(text(stage, "name") + ":");
-      System.out.println("    status: " + text(stage, "status"));
+      System.out.println(indent + text(stage, "name") + ":");
+      System.out.println(indent + "    status: " + text(stage, "status"));
 
       JsonNode jobs = stage.path("jobs");
       if (!jobs.isMissingNode() && jobs.isArray()) {
         for (JsonNode job : jobs) {
-          System.out.println("    " + text(job, "name") + ":");
-          System.out.println("        status: " + text(job, "status"));
+          System.out.println(indent + "    " + text(job, "name") + ":");
+          System.out.println(indent + "        status: "
+              + text(job, "status"));
         }
       }
     }
