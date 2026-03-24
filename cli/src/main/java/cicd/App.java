@@ -3,6 +3,7 @@ package cicd;
 import cicd.cmd.DryrunCmd;
 import cicd.cmd.ReportCmd;
 import cicd.cmd.RunCmd;
+import cicd.cmd.StatusCmd;
 import cicd.cmd.VerifyCmd;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -17,7 +18,8 @@ import picocli.CommandLine.Command;
         VerifyCmd.class,
         DryrunCmd.class,
         RunCmd.class,
-        ReportCmd.class
+        ReportCmd.class,
+        StatusCmd.class
     }
 )
 public class App implements Runnable {
