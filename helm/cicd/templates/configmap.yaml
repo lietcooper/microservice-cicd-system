@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cicd.fullname" . }}-config
+  labels:
+    {{- include "cicd.labels" . | nindent 4 }}
+data:
+  # ---- RabbitMQ (server + worker) ----
+  SPRING_RABBITMQ_HOST: {{ include "cicd.rabbitmq.host" . | quote }}
+  SPRING_RABBITMQ_PORT: {{ include "cicd.rabbitmq.port" . | quote }}
+  SPRING_RABBITMQ_USERNAME: {{ include "cicd.rabbitmq.username" . | quote }}
+
+  # ---- PostgreSQL (server only) ----
+  SPRING_DATASOURCE_URL: {{ include "cicd.postgresql.url" . | quote }}
+  SPRING_DATASOURCE_USERNAME: {{ include "cicd.postgresql.username" . | quote }}
