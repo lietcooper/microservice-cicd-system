@@ -226,7 +226,7 @@
 ## Phase 6: Job Container Log Forwarding
 
 ### 6.1 Stream Docker container logs to OTel
-- [ ] Modify `LocalDockerRunner.runJob()`:
+- [x] Modify `LocalDockerRunner.runJob()`:
   - After container starts, use `dockerClient.logContainerCmd(containerId).withFollowStream(true).withStdOut(true).withStdErr(true)` to stream logs in real-time
   - For each log frame, emit an OTel log record via `LoggerProvider` / SLF4J bridge with:
     - Attributes: `pipeline`, `run_no`, `stage`, `job`, `source=job-container`
@@ -234,13 +234,13 @@
   - Still capture full output into `StringBuilder` for `JobResult.output()` (existing behavior preserved)
   - **Files**: `worker/src/main/java/cicd/docker/LocalDockerRunner.java`
 
-- [ ] Update `DockerRunner` interface to accept metadata context:
+- [x] Update `DockerRunner` interface to accept metadata context:
   - Add overload or parameter object: `JobContext { pipeline, runNo, stage, job }`
   - Or: set MDC before calling `runJob()` in `JobExecutionListener` (simpler, MDC flows into log appender)
   - Recommended: Use MDC approach — set MDC in `JobExecutionListener` before calling `dockerRunner.runJob()`, and in `LocalDockerRunner`, log each container output line via SLF4J (MDC automatically included)
   - **Files**: `worker/src/main/java/cicd/listener/JobExecutionListener.java`, `worker/src/main/java/cicd/docker/LocalDockerRunner.java`
 
-- [ ] Add a "source" MDC field to distinguish system logs vs container logs:
+- [x] Add a "source" MDC field to distinguish system logs vs container logs:
   - System logs: `MDC.put("source", "system")`
   - Container logs: `MDC.put("source", "job-container")`
   - **Files**: various listener files
