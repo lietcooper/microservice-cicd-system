@@ -84,7 +84,7 @@
 ## Phase 3: OpenTelemetry SDK Configuration
 
 ### 3.1 Create OTel configuration beans
-- [ ] Create `server/src/main/java/cicd/config/OpenTelemetryConfig.java`:
+- [x] Create `server/src/main/java/cicd/config/OpenTelemetryConfig.java`:
   - Configure `SdkTracerProvider` with OTLP exporter
   - Configure `SdkMeterProvider` (for exemplars)
   - Set service name to `cicd-server`
@@ -92,12 +92,12 @@
   - Export a `Tracer` bean
   - **Files**: `server/src/main/java/cicd/config/OpenTelemetryConfig.java`
 
-- [ ] Create `worker/src/main/java/cicd/config/OpenTelemetryConfig.java`:
+- [x] Create `worker/src/main/java/cicd/config/OpenTelemetryConfig.java`:
   - Same structure, service name `cicd-worker`
   - **Files**: `worker/src/main/java/cicd/config/OpenTelemetryConfig.java`
 
 ### 3.2 Configure Spring Actuator + Prometheus metrics endpoint
-- [ ] Add to `server/src/main/resources/application.properties`:
+- [x] Add to `server/src/main/resources/application.properties`:
   ```properties
   management.endpoints.web.exposure.include=health,prometheus,info
   management.metrics.export.prometheus.enabled=true
@@ -105,7 +105,7 @@
   ```
   - **Files**: `server/src/main/resources/application.properties`
 
-- [ ] Add to `worker/src/main/resources/application.properties`:
+- [x] Add to `worker/src/main/resources/application.properties`:
   ```properties
   management.endpoints.web.exposure.include=health,prometheus,info
   management.metrics.export.prometheus.enabled=true
@@ -113,7 +113,7 @@
   ```
   - **Files**: `worker/src/main/resources/application.properties`
 
-- [ ] Verify: start server, `curl localhost:8080/actuator/prometheus` should return Prometheus format
+- [x] Verify: start server, `curl localhost:8080/actuator/prometheus` should return Prometheus format
 
 ---
 
