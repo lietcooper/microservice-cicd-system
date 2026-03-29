@@ -51,32 +51,32 @@
 ## Phase 2: Structured Logging
 
 ### 2.1 Configure Logback for structured JSON output
-- [ ] Create `server/src/main/resources/logback-spring.xml` with:
+- [x] Create `server/src/main/resources/logback-spring.xml` with:
   - Console appender using `LogstashEncoder` (structured JSON)
   - Include `traceId` and `spanId` fields via OTel Logback appender
   - Log level configurable via Spring profile
   - **Files**: `server/src/main/resources/logback-spring.xml`
 
-- [ ] Create `worker/src/main/resources/logback-spring.xml` with same structure
+- [x] Create `worker/src/main/resources/logback-spring.xml` with same structure
   - **Files**: `worker/src/main/resources/logback-spring.xml`
 
 ### 2.2 Convert System.out to SLF4J in modified files
-- [ ] Convert `PipelineOrchestrationListener.java` — replace all `System.out.println` / `System.err.println` with `private static final Logger log = LoggerFactory.getLogger(...)` and structured log calls. Use MDC for pipeline/run_no/stage/job context.
+- [x] Convert `PipelineOrchestrationListener.java` — replace all `System.out.println` / `System.err.println` with `private static final Logger log = LoggerFactory.getLogger(...)` and structured log calls. Use MDC for pipeline/run_no/stage/job context.
   - **Files**: `worker/src/main/java/cicd/listener/PipelineOrchestrationListener.java`
 
-- [ ] Convert `JobExecutionListener.java` — same pattern
+- [x] Convert `JobExecutionListener.java` — same pattern
   - **Files**: `worker/src/main/java/cicd/listener/JobExecutionListener.java`
 
-- [ ] Convert `JobResultListener.java` — same pattern
+- [x] Convert `JobResultListener.java` — same pattern
   - **Files**: `worker/src/main/java/cicd/listener/JobResultListener.java`
 
-- [ ] Convert `StatusUpdateListener.java` — same pattern
+- [x] Convert `StatusUpdateListener.java` — same pattern
   - **Files**: `server/src/main/java/cicd/listener/StatusUpdateListener.java`
 
-- [ ] Convert `PipelineMessagePublisher.java` — same pattern
+- [x] Convert `PipelineMessagePublisher.java` — same pattern
   - **Files**: `server/src/main/java/cicd/messaging/PipelineMessagePublisher.java`
 
-- [ ] Convert `StatusUpdatePublisher.java` and `StatusEventPublisher.java` — same pattern
+- [x] Convert `StatusUpdatePublisher.java` and `StatusEventPublisher.java` — same pattern
   - **Files**: `worker/src/main/java/cicd/service/StatusUpdatePublisher.java`, `worker/src/main/java/cicd/service/StatusEventPublisher.java`
 
 ---
