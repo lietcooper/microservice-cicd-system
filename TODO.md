@@ -283,18 +283,18 @@
 ## Phase 8: Helm Chart — Observability Stack
 
 ### 8.1 Add OTel Collector
-- [ ] Add to `helm/cicd/values.yaml`: `otelCollector` section (image: `otel/opentelemetry-collector-contrib`, ports: 4317 gRPC, 4318 HTTP)
-- [ ] Create `helm/cicd/templates/otel-collector-deployment.yaml`: Deployment + Service
-- [ ] Create `helm/cicd/templates/otel-collector-configmap.yaml`: Collector config YAML:
+- [x] Add to `helm/cicd/values.yaml`: `otelCollector` section (image: `otel/opentelemetry-collector-contrib`, ports: 4317 gRPC, 4318 HTTP)
+- [x] Create `helm/cicd/templates/otel-collector-deployment.yaml`: Deployment + Service
+- [x] Create `helm/cicd/templates/otel-collector-configmap.yaml`: Collector config YAML:
   - Receivers: `otlp` (grpc:4317, http:4318)
   - Exporters: `prometheus` (for metrics→Prometheus), `loki` (for logs→Loki), `otlp/tempo` (for traces→Tempo)
   - Pipelines: metrics→prometheus, logs→loki, traces→otlp/tempo
   - **Files**: `helm/cicd/values.yaml`, `helm/cicd/templates/otel-collector-deployment.yaml`, `helm/cicd/templates/otel-collector-configmap.yaml`
 
 ### 8.2 Add Prometheus
-- [ ] Add to `values.yaml`: `prometheus` section (image: `prom/prometheus`, storage: 5Gi)
-- [ ] Create `helm/cicd/templates/prometheus-statefulset.yaml`: StatefulSet + Service + PVC
-- [ ] Create `helm/cicd/templates/prometheus-configmap.yaml`: scrape config:
+- [x] Add to `values.yaml`: `prometheus` section (image: `prom/prometheus`, storage: 5Gi)
+- [x] Create `helm/cicd/templates/prometheus-statefulset.yaml`: StatefulSet + Service + PVC
+- [x] Create `helm/cicd/templates/prometheus-configmap.yaml`: scrape config:
   - Scrape server at `cicd-server:8080/actuator/prometheus`
   - Scrape worker at `cicd-worker:8081/actuator/prometheus`
   - Scrape interval: 15s
@@ -302,45 +302,45 @@
   - **Files**: `helm/cicd/values.yaml`, `helm/cicd/templates/prometheus-statefulset.yaml`, `helm/cicd/templates/prometheus-configmap.yaml`
 
 ### 8.3 Add Loki
-- [ ] Add to `values.yaml`: `loki` section (image: `grafana/loki`, storage: 5Gi)
-- [ ] Create `helm/cicd/templates/loki-statefulset.yaml`: StatefulSet + Service + PVC
-- [ ] Create `helm/cicd/templates/loki-configmap.yaml`: Loki config (auth disabled, single-tenant, filesystem storage)
+- [x] Add to `values.yaml`: `loki` section (image: `grafana/loki`, storage: 5Gi)
+- [x] Create `helm/cicd/templates/loki-statefulset.yaml`: StatefulSet + Service + PVC
+- [x] Create `helm/cicd/templates/loki-configmap.yaml`: Loki config (auth disabled, single-tenant, filesystem storage)
   - **Files**: `helm/cicd/values.yaml`, `helm/cicd/templates/loki-statefulset.yaml`, `helm/cicd/templates/loki-configmap.yaml`
 
 ### 8.4 Add Tempo
-- [ ] Add to `values.yaml`: `tempo` section (image: `grafana/tempo`, storage: 5Gi)
-- [ ] Create `helm/cicd/templates/tempo-statefulset.yaml`: StatefulSet + Service + PVC
-- [ ] Create `helm/cicd/templates/tempo-configmap.yaml`: Tempo config (OTLP receiver, local filesystem backend)
+- [x] Add to `values.yaml`: `tempo` section (image: `grafana/tempo`, storage: 5Gi)
+- [x] Create `helm/cicd/templates/tempo-statefulset.yaml`: StatefulSet + Service + PVC
+- [x] Create `helm/cicd/templates/tempo-configmap.yaml`: Tempo config (OTLP receiver, local filesystem backend)
   - **Files**: `helm/cicd/values.yaml`, `helm/cicd/templates/tempo-statefulset.yaml`, `helm/cicd/templates/tempo-configmap.yaml`
 
 ### 8.5 Add Grafana
-- [ ] Add to `values.yaml`: `grafana` section (image: `grafana/grafana`, service type: ClusterIP or NodePort for access)
-- [ ] Create `helm/cicd/templates/grafana-deployment.yaml`: Deployment + Service
-- [ ] Create `helm/cicd/templates/grafana-configmap.yaml`: Contains:
+- [x] Add to `values.yaml`: `grafana` section (image: `grafana/grafana`, service type: ClusterIP or NodePort for access)
+- [x] Create `helm/cicd/templates/grafana-deployment.yaml`: Deployment + Service
+- [x] Create `helm/cicd/templates/grafana-configmap.yaml`: Contains:
   - Datasource provisioning (Prometheus, Loki, Tempo, PostgreSQL)
   - Dashboard provisioning config (points to dashboard JSON files)
   - **Files**: `helm/cicd/values.yaml`, `helm/cicd/templates/grafana-deployment.yaml`, `helm/cicd/templates/grafana-configmap.yaml`
 
 ### 8.6 Update existing Helm templates
-- [ ] Update `helm/cicd/templates/server-deployment.yaml`:
+- [x] Update `helm/cicd/templates/server-deployment.yaml`:
   - Add env var `OTEL_EXPORTER_OTLP_ENDPOINT` pointing to `http://cicd-otel-collector:4317`
   - Add env var `OTEL_SERVICE_NAME=cicd-server`
   - Update liveness/readiness to use `/actuator/health` instead of TCP socket
   - **Files**: `helm/cicd/templates/server-deployment.yaml`
 
-- [ ] Update `helm/cicd/templates/worker-deployment.yaml`:
+- [x] Update `helm/cicd/templates/worker-deployment.yaml`:
   - Same OTel env vars with `OTEL_SERVICE_NAME=cicd-worker`
   - Update probes similarly
   - **Files**: `helm/cicd/templates/worker-deployment.yaml`
 
-- [ ] Update `helm/cicd/templates/configmap.yaml`:
+- [x] Update `helm/cicd/templates/configmap.yaml`:
   - Add OTel-related config entries
   - **Files**: `helm/cicd/templates/configmap.yaml`
 
-- [ ] Verify: `helm template cicd ./helm/cicd` renders without errors
+- [x] Verify: `helm template cicd ./helm/cicd` renders without errors
 
 ### 8.7 Add health check probes for observability components
-- [ ] Add liveness/readiness probes to all new StatefulSets/Deployments:
+- [x] Add liveness/readiness probes to all new StatefulSets/Deployments:
   - Prometheus: `/-/healthy` on port 9090
   - Loki: `/ready` on port 3100
   - Tempo: `/ready` on port 3200
