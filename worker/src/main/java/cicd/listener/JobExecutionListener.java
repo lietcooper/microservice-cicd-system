@@ -93,13 +93,9 @@ public class JobExecutionListener {
           msg.getPipelineName(), msg.getRunNo(),
           msg.getStageName(), msg.getJobName());
 
-      // Execute in Docker
+      // Execute in Docker (container logs streamed via LocalDockerRunner)
       JobResult result = dockerRunner.runJob(
           msg.getImage(), msg.getScripts(), msg.getWorkspacePath());
-
-      if (result.output() != null && !result.output().isBlank()) {
-        result.output().lines().forEach(l -> log.info("{}", l));
-      }
 
       // Update job status via MQ
       statusPublisher.jobCompleted(msg.getPipelineRunId(),
