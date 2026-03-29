@@ -3,6 +3,8 @@ package cicd.service;
 import cicd.config.RabbitMqConfig;
 import cicd.messaging.StatusEventMessage;
 import java.time.OffsetDateTime;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
@@ -11,6 +13,9 @@ import org.springframework.stereotype.Component;
  */
 @Component("workerStatusEventPublisher")
 public class StatusEventPublisher {
+
+  private static final Logger log =
+      LoggerFactory.getLogger(StatusEventPublisher.class);
 
   private final RabbitTemplate rabbitTemplate;
 
@@ -86,6 +91,7 @@ public class StatusEventPublisher {
     event.setTimestamp(OffsetDateTime.now());
     event.setMessage(message);
 
+    log.debug("Publishing event: {}", eventType);
     rabbitTemplate.convertAndSend(
         RabbitMqConfig.EVENTS_EXCHANGE, eventType, event);
   }
