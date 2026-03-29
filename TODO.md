@@ -120,7 +120,7 @@
 ## Phase 4: Metrics Instrumentation
 
 ### 4.1 Create metrics service
-- [ ] Create `server/src/main/java/cicd/observability/CicdMetrics.java`:
+- [x] Create `server/src/main/java/cicd/observability/CicdMetrics.java`:
   - Inject `MeterRegistry`
   - Register the 5 required metrics using Micrometer API:
     - `cicd_pipeline_runs_total` — `Counter.builder("cicd.pipeline.runs.total").tag("pipeline", name).tag("status", status).register(registry)`
@@ -133,14 +133,14 @@
   - **Files**: `server/src/main/java/cicd/observability/CicdMetrics.java`
 
 ### 4.2 Instrument StatusUpdateListener to record metrics
-- [ ] Inject `CicdMetrics` into `StatusUpdateListener`
+- [x] Inject `CicdMetrics` into `StatusUpdateListener`
   - On pipeline completion (status change to SUCCESS/FAILED): call `recordPipelineCompleted`
   - On stage completion: call `recordStageCompleted`
   - On job completion: call `recordJobCompleted`
   - Calculate duration from `startTime` to `endTime` in the status update message
   - **Files**: `server/src/main/java/cicd/listener/StatusUpdateListener.java`
 
-- [ ] Verify: run a pipeline, check `curl localhost:8080/actuator/prometheus | grep cicd_`
+- [x] Verify: run a pipeline, check `curl localhost:8080/actuator/prometheus | grep cicd_`
 
 ---
 
