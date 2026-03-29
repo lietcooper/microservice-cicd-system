@@ -370,7 +370,7 @@
   - **Files**: `helm/cicd/dashboards/stage-job-breakdown.json`
 
 ### 9.3 Dashboard 3: Logs Viewer
-- [ ] Create `helm/cicd/dashboards/logs-viewer.json`:
+- [x] Create `helm/cicd/dashboards/logs-viewer.json`:
   - Template variables: `pipeline`, `run_no`, `stage`, `job` (all from Loki label values)
   - Panel 1: Logs panel — LogQL query: `{pipeline="$pipeline", run_no="$run_no", stage=~"$stage", job=~"$job"}`
   - Must show both system logs (`source="system"`) and container logs (`source="job-container"`) with source distinguishable
