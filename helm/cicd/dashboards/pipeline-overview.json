@@ -1,0 +1,212 @@
+{
+  "uid": "cicd-pipeline-overview",
+  "title": "CI/CD - Pipeline Overview",
+  "description": "Total pipeline runs by status, duration over time, and recent runs table",
+  "tags": ["cicd"],
+  "timezone": "browser",
+  "editable": true,
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Pipeline Runs by Status",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "sum by (status) (cicd_pipeline_runs_total)",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "SUCCESS" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "FAILED" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"]
+        },
+        "legend": { "displayMode": "table", "placement": "right" },
+        "pieType": "pie"
+      }
+    },
+    {
+      "id": 2,
+      "title": "Pipeline Runs by Status (Bar)",
+      "type": "barchart",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "sum by (pipeline, status) (cicd_pipeline_runs_total)",
+          "legendFormat": "{{pipeline}} - {{status}}",
+          "refId": "A",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "xTickLabelRotation": 0,
+        "groupWidth": 0.7,
+        "barWidth": 0.5
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true },
+            "renameByName": { "pipeline": "Pipeline", "status": "Status", "Value": "Count" }
+          }
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Pipeline Duration Over Time (p95)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(cicd_pipeline_duration_seconds_bucket[5m])) by (le, pipeline))",
+          "legendFormat": "{{pipeline}} p95",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(cicd_pipeline_duration_seconds_bucket[5m])) by (le, pipeline))",
+          "legendFormat": "{{pipeline}} p50",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Recent Pipeline Runs",
+      "type": "table",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 8 },
+      "datasource": { "type": "postgres", "uid": "${DS_POSTGRESQL}" },
+      "targets": [
+        {
+          "rawSql": "SELECT pipeline_name AS \"Pipeline\", run_no AS \"Run\", git_branch AS \"Branch\", SUBSTRING(git_hash, 1, 8) AS \"Commit\", status AS \"Status\", trace_id AS \"Trace ID\", start_time AS \"Start Time\", end_time AS \"End Time\", CASE WHEN end_time IS NOT NULL AND start_time IS NOT NULL THEN ROUND(EXTRACT(EPOCH FROM (end_time - start_time))::numeric, 1) ELSE NULL END AS \"Duration (s)\" FROM pipeline_runs ORDER BY start_time DESC LIMIT 20",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Status" },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  { "type": "value", "options": { "SUCCESS": { "color": "green", "text": "SUCCESS" } } },
+                  { "type": "value", "options": { "FAILED": { "color": "red", "text": "FAILED" } } },
+                  { "type": "value", "options": { "RUNNING": { "color": "yellow", "text": "RUNNING" } } },
+                  { "type": "value", "options": { "PENDING": { "color": "blue", "text": "PENDING" } } }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Trace ID" },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "View Trace",
+                    "url": "/d/cicd-trace-explorer?var-traceId=${__value.raw}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Start Time" },
+            "properties": [{ "id": "unit", "value": "dateTimeAsIso" }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "End Time" },
+            "properties": [{ "id": "unit", "value": "dateTimeAsIso" }]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [{ "displayName": "Start Time", "desc": true }],
+        "footer": { "show": false }
+      }
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "DS_PROMETHEUS",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": { "text": "Prometheus", "value": "Prometheus" },
+        "hide": 2
+      },
+      {
+        "name": "DS_POSTGRESQL",
+        "type": "datasource",
+        "query": "postgres",
+        "current": { "text": "PostgreSQL", "value": "PostgreSQL" },
+        "hide": 2
+      }
+    ]
+  },
+  "schemaVersion": 39,
+  "version": 1
+}
