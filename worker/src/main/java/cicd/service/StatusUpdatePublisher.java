@@ -3,6 +3,8 @@ package cicd.service;
 import cicd.config.RabbitMqConfig;
 import cicd.messaging.StatusUpdateMessage;
 import java.time.OffsetDateTime;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
@@ -12,6 +14,9 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class StatusUpdatePublisher {
+
+  private static final Logger log =
+      LoggerFactory.getLogger(StatusUpdatePublisher.class);
 
   private final RabbitTemplate rabbitTemplate;
 
@@ -155,6 +160,8 @@ public class StatusUpdatePublisher {
   }
 
   private void publish(StatusUpdateMessage msg) {
+    log.debug("Publishing status update: entity={} status={}",
+        msg.getEntityType(), msg.getStatus());
     rabbitTemplate.convertAndSend(
         RabbitMqConfig.STATUS_EXCHANGE,
         RabbitMqConfig.STATUS_UPDATE_KEY,
