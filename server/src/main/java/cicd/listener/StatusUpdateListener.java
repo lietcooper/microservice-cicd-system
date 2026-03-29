@@ -9,6 +9,8 @@ import cicd.persistence.entity.StageRunEntity;
 import cicd.persistence.repository.JobRunRepository;
 import cicd.persistence.repository.PipelineRunRepository;
 import cicd.persistence.repository.StageRunRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
@@ -18,6 +20,9 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class StatusUpdateListener {
+
+  private static final Logger log =
+      LoggerFactory.getLogger(StatusUpdateListener.class);
 
   private final PipelineRunRepository pipelineRunRepo;
   private final StageRunRepository stageRunRepo;
@@ -39,8 +44,8 @@ public class StatusUpdateListener {
       case "PIPELINE" -> handlePipeline(msg);
       case "STAGE" -> handleStage(msg);
       case "JOB" -> handleJob(msg);
-      default -> System.err.println(
-          "Unknown entity type: " + msg.getEntityType());
+      default -> log.error("Unknown entity type: {}",
+          msg.getEntityType());
     }
   }
 
@@ -48,8 +53,7 @@ public class StatusUpdateListener {
     PipelineRunEntity run = pipelineRunRepo
         .findById(msg.getPipelineRunId()).orElse(null);
     if (run == null) {
-      System.err.println("Pipeline run not found: "
-          + msg.getPipelineRunId());
+      log.error("Pipeline run not found: {}", msg.getPipelineRunId());
       return;
     }
 
@@ -68,8 +72,8 @@ public class StatusUpdateListener {
     PipelineRunEntity pipelineRun = pipelineRunRepo
         .findById(msg.getPipelineRunId()).orElse(null);
     if (pipelineRun == null) {
-      System.err.println("Pipeline run not found for stage update: "
-          + msg.getPipelineRunId());
+      log.error("Pipeline run not found for stage update: {}",
+          msg.getPipelineRunId());
       return;
     }
 
@@ -104,10 +108,8 @@ public class StatusUpdateListener {
         .orElse(null);
 
     if (stageRun == null) {
-      System.err.println(
-          "Stage run not found for job update: pipeline="
-          + msg.getPipelineRunId()
-          + " stage=" + msg.getStageName());
+      log.error("Stage run not found for job update: pipeline={} stage={}",
+          msg.getPipelineRunId(), msg.getStageName());
       return;
     }
 
