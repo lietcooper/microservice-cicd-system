@@ -27,4 +27,7 @@ public class RunSummaryDto {
 
   @JsonProperty("end")
   private OffsetDateTime endTime;
+
+  @JsonProperty("trace-id")
+  private String traceId;
 }
