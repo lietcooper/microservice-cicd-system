@@ -1,0 +1,111 @@
+{
+  "uid": "cicd-logs-viewer",
+  "title": "CI/CD - Logs Viewer",
+  "description": "Filter logs by pipeline, run number, stage, job, and source (system vs container)",
+  "tags": ["cicd"],
+  "timezone": "browser",
+  "editable": true,
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "refresh": "10s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Logs",
+      "type": "logs",
+      "gridPos": { "h": 24, "w": 24, "x": 0, "y": 0 },
+      "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+      "targets": [
+        {
+          "expr": "{pipeline=~\"$pipeline\", run_no=~\"$run_no\", stage=~\"$stage\", job=~\"$job\", source=~\"$source\"}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": true,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none"
+      }
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "DS_LOKI",
+        "type": "datasource",
+        "query": "loki",
+        "current": { "text": "Loki", "value": "Loki" },
+        "hide": 2
+      },
+      {
+        "name": "pipeline",
+        "type": "query",
+        "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+        "query": "label_values(pipeline)",
+        "refresh": 2,
+        "sort": 1,
+        "label": "Pipeline",
+        "includeAll": true,
+        "allValue": ".*",
+        "current": { "text": "All", "value": "$__all" }
+      },
+      {
+        "name": "run_no",
+        "type": "query",
+        "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+        "query": "label_values({pipeline=~\"$pipeline\"}, run_no)",
+        "refresh": 2,
+        "sort": 2,
+        "label": "Run Number",
+        "includeAll": true,
+        "allValue": ".*",
+        "current": { "text": "All", "value": "$__all" }
+      },
+      {
+        "name": "stage",
+        "type": "query",
+        "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+        "query": "label_values({pipeline=~\"$pipeline\", run_no=~\"$run_no\"}, stage)",
+        "refresh": 2,
+        "sort": 1,
+        "label": "Stage",
+        "includeAll": true,
+        "allValue": ".*",
+        "current": { "text": "All", "value": "$__all" }
+      },
+      {
+        "name": "job",
+        "type": "query",
+        "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+        "query": "label_values({pipeline=~\"$pipeline\", run_no=~\"$run_no\", stage=~\"$stage\"}, job)",
+        "refresh": 2,
+        "sort": 1,
+        "label": "Job",
+        "includeAll": true,
+        "allValue": ".*",
+        "current": { "text": "All", "value": "$__all" }
+      },
+      {
+        "name": "source",
+        "type": "query",
+        "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+        "query": "label_values(source)",
+        "refresh": 2,
+        "sort": 1,
+        "label": "Source",
+        "includeAll": true,
+        "allValue": ".*",
+        "current": { "text": "All", "value": "$__all" }
+      }
+    ]
+  },
+  "schemaVersion": 39,
+  "version": 1
+}
