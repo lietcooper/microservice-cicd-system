@@ -362,7 +362,7 @@
   - **Files**: `helm/cicd/dashboards/pipeline-overview.json`
 
 ### 9.2 Dashboard 2: Stage & Job Breakdown
-- [ ] Create `helm/cicd/dashboards/stage-job-breakdown.json`:
+- [x] Create `helm/cicd/dashboards/stage-job-breakdown.json`:
   - Template variables: `pipeline` (dropdown from label values), `run_no` (from PostgreSQL query or label values)
   - Panel 1: Bar chart — per-stage duration (PromQL or PostgreSQL query)
   - Panel 2: Bar chart — per-job duration within selected pipeline+run
