@@ -7,6 +7,9 @@ import cicd.messaging.JobExecuteMessage;
 import cicd.messaging.JobResultMessage;
 import cicd.service.StatusEventPublisher;
 import cicd.service.StatusUpdatePublisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
@@ -17,6 +20,9 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class JobExecutionListener {
+
+  private static final Logger log =
+      LoggerFactory.getLogger(JobExecutionListener.class);
 
   private final LocalDockerRunner dockerRunner;
   private final RabbitTemplate rabbitTemplate;
@@ -36,8 +42,14 @@ public class JobExecutionListener {
   /** Executes a job in Docker and publishes the result. */
   @RabbitListener(queues = RabbitMqConfig.JOB_EXECUTE_QUEUE)
   public void onJobExecute(JobExecuteMessage msg) {
-    System.out.println("  > Job Worker: executing '" + msg.getJobName()
-        + "' [" + msg.getImage() + "]");
+    MDC.put("pipeline", msg.getPipelineName());
+    MDC.put("run_no", String.valueOf(msg.getRunNo()));
+    MDC.put("stage", msg.getStageName());
+    MDC.put("job", msg.getJobName());
+    MDC.put("source", "system");
+    try {
+    log.info("Job Worker: executing '{}' [{}]",
+        msg.getJobName(), msg.getImage());
 
     // Update job status to RUNNING via MQ
     statusPublisher.jobStarted(msg.getPipelineRunId(),
@@ -53,7 +65,7 @@ public class JobExecutionListener {
         msg.getImage(), msg.getScripts(), msg.getWorkspacePath());
 
     if (result.output() != null && !result.output().isBlank()) {
-      result.output().lines().forEach(l -> System.out.println("    " + l));
+      result.output().lines().forEach(l -> log.info("{}", l));
     }
 
     // Update job status via MQ
@@ -82,7 +94,13 @@ public class JobExecutionListener {
         RabbitMqConfig.JOB_RESULT_KEY,
         resultMsg);
 
-    System.out.println("  " + (result.ok() ? "v" : "x") + " Job '"
-        + msg.getJobName() + "' " + (result.ok() ? "passed" : "failed"));
+    if (result.ok()) {
+      log.info("Job '{}' passed", msg.getJobName());
+    } else {
+      log.error("Job '{}' failed", msg.getJobName());
+    }
+    } finally {
+      MDC.clear();
+    }
   }
 }
