@@ -1,0 +1,11 @@
+apiVersion: v2
+name: cicd
+description: A Helm chart for deploying the CS7580 CI/CD system (server + worker)
+type: application
+version: 0.2.0
+appVersion: "0.2.0"
+keywords:
+  - cicd
+  - spring-boot
+maintainers:
+  - name: CS7580 Team

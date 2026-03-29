@@ -1,0 +1,123 @@
+# =============================================================
+# Server (Spring Boot REST API, port 8080)
+# =============================================================
+server:
+  image:
+    repository: yskigpg/cicd-server
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 8080
+  service:
+    type: ClusterIP
+    port: 8080
+
+# =============================================================
+# Worker (Spring Boot RabbitMQ consumer, port 8081)
+# =============================================================
+worker:
+  image:
+    repository: yskigpg/cicd-worker
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 8081
+  service:
+    type: ClusterIP
+    port: 8081
+
+# =============================================================
+# PostgreSQL  (set enabled: false to use an external instance)
+# =============================================================
+postgresql:
+  enabled: true
+  image:
+    repository: postgres
+    tag: 16-alpine
+  database: cicd
+  username: cicd
+  password: cicd
+  storage: 5Gi
+  # Used only when enabled: false — full JDBC URL to external DB
+  externalUrl: ""   # e.g. jdbc:postgresql://my-db.example.com:5432/cicd
+  externalUsername: cicd
+  externalPassword: ""
+
+# =============================================================
+# RabbitMQ  (set enabled: false to use an external broker)
+# =============================================================
+rabbitmq:
+  enabled: true
+  image:
+    repository: rabbitmq
+    tag: 3.13-management-alpine
+  username: cicd
+  password: cicd
+  storage: 2Gi
+  # Used only when enabled: false
+  externalHost: ""   # e.g. my-rmq.example.com
+  externalPort: 5672
+  externalUsername: cicd
+  externalPassword: ""
+
+# =============================================================
+# OpenTelemetry Collector
+# =============================================================
+otelCollector:
+  enabled: true
+  image:
+    repository: otel/opentelemetry-collector-contrib
+    tag: 0.104.0
+  ports:
+    grpc: 4317
+    http: 4318
+    healthCheck: 13133
+
+# =============================================================
+# Prometheus
+# =============================================================
+prometheus:
+  enabled: true
+  image:
+    repository: prom/prometheus
+    tag: v2.53.0
+  storage: 5Gi
+  port: 9090
+  scrapeInterval: 15s
+
+# =============================================================
+# Loki
+# =============================================================
+loki:
+  enabled: true
+  image:
+    repository: grafana/loki
+    tag: 3.1.0
+  storage: 5Gi
+  port: 3100
+
+# =============================================================
+# Tempo
+# =============================================================
+tempo:
+  enabled: true
+  image:
+    repository: grafana/tempo
+    tag: 2.5.0
+  storage: 5Gi
+  port: 3200
+
+# =============================================================
+# Grafana
+# =============================================================
+grafana:
+  enabled: true
+  image:
+    repository: grafana/grafana
+    tag: 11.1.0
+  port: 3000
+  service:
+    type: ClusterIP
+    port: 3000
+  adminUser: admin
+  adminPassword: admin

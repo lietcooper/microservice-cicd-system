@@ -1,0 +1,68 @@
+{{- if .Values.grafana.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cicd.fullname" . }}-grafana
+  labels:
+    {{- include "cicd.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://{{ include "cicd.fullname" . }}-prometheus:{{ .Values.prometheus.port }}
+        isDefault: true
+        jsonData:
+          exemplarTraceIdDestinations:
+            - name: traceID
+              datasourceUid: tempo
+
+      - name: Loki
+        type: loki
+        access: proxy
+        url: http://{{ include "cicd.fullname" . }}-loki:{{ .Values.loki.port }}
+        jsonData:
+          derivedFields:
+            - datasourceUid: tempo
+              matcherRegex: "traceId=(\\w+)"
+              name: TraceID
+              url: "$${__value.raw}"
+
+      - name: Tempo
+        type: tempo
+        uid: tempo
+        access: proxy
+        url: http://{{ include "cicd.fullname" . }}-tempo:{{ .Values.tempo.port }}
+        jsonData:
+          tracesToLogs:
+            datasourceUid: loki
+            filterByTraceID: true
+
+      - name: PostgreSQL
+        type: postgres
+        access: proxy
+        url: {{ include "cicd.fullname" . }}-postgresql:5432
+        database: {{ .Values.postgresql.database }}
+        user: {{ .Values.postgresql.username }}
+        secureJsonData:
+          password: {{ .Values.postgresql.password }}
+        jsonData:
+          sslmode: disable
+          postgresVersion: 1600
+
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+      - name: default
+        orgId: 1
+        folder: CI/CD
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards
+          foldersFromFilesStructure: false
+{{- end }}
