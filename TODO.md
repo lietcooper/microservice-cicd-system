@@ -395,7 +395,7 @@
 
 ## Phase 10: Prometheus Alert Rules (Extra Credit)
 
-- [ ] Create `helm/cicd/templates/prometheus-rules-configmap.yaml`:
+- [x] Create `helm/cicd/templates/prometheus-rules-configmap.yaml`:
   - Rule 1: `CicdPipelineConsecutiveFailures` — alert if pipeline fails 3+ times in a row
   - Rule 2: `CicdJobDurationHigh` — alert if any job duration p95 > 10 minutes
   - Rule 3: `CicdPipelineDurationHigh` — alert if pipeline duration p95 > 30 minutes
