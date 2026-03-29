@@ -386,7 +386,7 @@
   - **Files**: `helm/cicd/dashboards/trace-explorer.json`
 
 ### 9.5 Wire dashboards into Grafana provisioning
-- [ ] Add dashboard JSON files as a ConfigMap in Helm:
+- [x] Add dashboard JSON files as a ConfigMap in Helm:
   - Create `helm/cicd/templates/grafana-dashboards-configmap.yaml` that mounts all 4 JSON files
   - Reference in Grafana's provisioning config (`dashboards.yaml` provider pointing to `/var/lib/grafana/dashboards/`)
   - **Files**: `helm/cicd/templates/grafana-dashboards-configmap.yaml`, update `helm/cicd/templates/grafana-configmap.yaml`
