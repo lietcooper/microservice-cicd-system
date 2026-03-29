@@ -250,31 +250,31 @@
 ## Phase 7: Report Command Changes
 
 ### 7.1 Add trace-id to report API response
-- [ ] Add `traceId` field to `PipelineRunDetailResponse.java`:
+- [x] Add `traceId` field to `PipelineRunDetailResponse.java`:
   ```java
   @JsonProperty("trace-id")
   private String traceId;
   ```
   - **Files**: `server/src/main/java/cicd/api/dto/PipelineRunDetailResponse.java`
 
-- [ ] Add `traceId` to `RunSummaryDto.java` (for level-1 report):
+- [x] Add `traceId` to `RunSummaryDto.java` (for level-1 report):
   ```java
   @JsonProperty("trace-id")
   private String traceId;
   ```
   - **Files**: `server/src/main/java/cicd/api/dto/RunSummaryDto.java`
 
-- [ ] Update `ReportService.java` to populate `traceId` from entity:
+- [x] Update `ReportService.java` to populate `traceId` from entity:
   - In `toRunSummary()`: `dto.setTraceId(entity.getTraceId())`
   - In `getRun()`, `getStage()`, `getJob()`: `response.setTraceId(run.getTraceId())`
   - **Files**: `server/src/main/java/cicd/service/ReportService.java`
 
 ### 7.2 Update CLI report output
-- [ ] In `ReportCmd.printRunDetail()`:
+- [x] In `ReportCmd.printRunDetail()`:
   - Add line: `System.out.println("trace-id: " + text(json, "trace-id"));` after the status line
   - **Files**: `cli/src/main/java/cicd/cmd/ReportCmd.java`
 
-- [ ] In `ReportCmd.printLevel1()` (per-run in the list):
+- [x] In `ReportCmd.printLevel1()` (per-run in the list):
   - Add: `System.out.println("    trace-id: " + text(rn, "trace-id"));`
   - **Files**: `cli/src/main/java/cicd/cmd/ReportCmd.java`
 
