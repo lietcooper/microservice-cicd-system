@@ -18,6 +18,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
@@ -29,6 +32,9 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class PipelineOrchestrationListener {
+
+  private static final Logger log =
+      LoggerFactory.getLogger(PipelineOrchestrationListener.class);
 
   private final RabbitTemplate rabbitTemplate;
   private final StageCoordinatorService coordinator;
@@ -55,8 +61,12 @@ public class PipelineOrchestrationListener {
       concurrency = "1")
   public void onPipelineExecute(PipelineExecuteMessage msg) {
     Path workspacePath = null;
-    System.out.println("=== Orchestrator: running pipeline '"
-        + msg.getPipelineName() + "' run #" + msg.getRunNo() + " ===");
+    MDC.put("pipeline", msg.getPipelineName());
+    MDC.put("run_no", String.valueOf(msg.getRunNo()));
+    MDC.put("source", "system");
+    try {
+    log.info("Orchestrator: running pipeline '{}' run #{}",
+        msg.getPipelineName(), msg.getRunNo());
 
     // Update to RUNNING via MQ
     statusPublisher.pipelineRunning(
@@ -85,7 +95,8 @@ public class PipelineOrchestrationListener {
       int stageOrder = 0;
 
       for (ExecutionPlanner.WaveStageExecution stage : plan) {
-        System.out.println("\n--- Stage: " + stage.getStageName() + " ---");
+        MDC.put("stage", stage.getStageName());
+        log.info("Stage: {}", stage.getStageName());
 
         int currentStageOrder = stageOrder++;
 
@@ -116,8 +127,8 @@ public class PipelineOrchestrationListener {
               if (!job.allowFailure) {
                 failedRequiredJobs.add(job.name);
               }
-              System.out.println("  > Skipped job: " + job.name
-                  + " (blocked by failed dependency)");
+              log.info("Skipped job: {} (blocked by failed dependency)",
+                  job.name);
             } else {
               runnableJobs.add(job);
             }
@@ -153,8 +164,8 @@ public class PipelineOrchestrationListener {
                 RabbitMqConfig.JOB_EXECUTE_KEY,
                 jobMsg);
 
-            System.out.println("  > Dispatched job: " + job.name
-                + " [" + job.image + "] wave=" + correlationId);
+            log.info("Dispatched job: {} [{}] wave={}",
+                job.name, job.image, correlationId);
           }
 
           StageCoordinatorService.WaveTracker tracker =
@@ -165,8 +176,8 @@ public class PipelineOrchestrationListener {
             stageFailed = true;
             pipelineFailed = true;
             if (tracker != null && tracker.isTimedOut()) {
-              System.err.println("  x Wave timed out in stage '"
-                  + stage.getStageName() + "'");
+              log.error("Wave timed out in stage '{}'",
+                  stage.getStageName());
             }
             break;
           }
@@ -197,8 +208,9 @@ public class PipelineOrchestrationListener {
             msg.getPipelineName(), msg.getRunNo(), stage.getStageName(),
             !stageFailed);
 
+        MDC.remove("stage");
         if (pipelineFailed) {
-          System.err.println("=== Pipeline FAILED ===");
+          log.error("Pipeline FAILED");
           break;
         }
       }
@@ -210,10 +222,13 @@ public class PipelineOrchestrationListener {
           msg.getPipelineName(), msg.getRunNo(), !pipelineFailed);
 
       if (!pipelineFailed) {
-        System.out.println("\n=== Pipeline PASSED ===");
+        log.info("Pipeline PASSED");
       }
     } finally {
       workspaceArchiveService.cleanupWorkspace(workspacePath);
+    }
+    } finally {
+      MDC.clear();
     }
   }
 
@@ -226,13 +241,13 @@ public class PipelineOrchestrationListener {
       Files.deleteIfExists(tempFile);
 
       if (!parser.getErrors().isEmpty()) {
-        System.err.println("YAML parse errors: "
-            + String.join("\n", parser.getErrors()));
+        log.error("YAML parse errors: {}",
+            String.join("\n", parser.getErrors()));
         return null;
       }
       return pipeline;
     } catch (IOException e) {
-      System.err.println("Failed to parse pipeline YAML: " + e.getMessage());
+      log.error("Failed to parse pipeline YAML: {}", e.getMessage());
       return null;
     }
   }
