@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "cicd.fullname" . }}-worker
+  labels:
+    {{- include "cicd.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  replicas: {{ .Values.worker.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: worker
+    spec:
+      containers:
+        - name: worker
+          image: "{{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}"
+          imagePullPolicy: {{ .Values.worker.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.worker.port }}
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "cicd.fullname" . }}-config
+          env:
+            - name: SPRING_RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "cicd.fullname" . }}-secret
+                  key: SPRING_RABBITMQ_PASSWORD
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://{{ include "cicd.fullname" . }}-otel-collector:4317"
+            - name: OTEL_SERVICE_NAME
+              value: cicd-worker
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 40
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          # Worker uses /tmp/cicd-workspaces for Docker job workspaces
+          volumeMounts:
+            - name: cicd-workspaces
+              mountPath: /tmp/cicd-workspaces
+            - name: docker-socket
+              mountPath: /var/run/docker.sock
+          resources: {}
+      volumes:
+        - name: cicd-workspaces
+          emptyDir: {}
+        - name: docker-socket
+          hostPath:
+            path: /var/run/docker.sock
+            type: Socket
