@@ -56,6 +56,9 @@ public class PipelineRunEntity {
   @Column(name = "git_repo", length = 512)
   private String gitRepo;
 
+  @Column(name = "trace_id", length = 32)
+  private String traceId;
+
   @OneToMany(mappedBy = "pipelineRun",
       cascade = CascadeType.ALL, orphanRemoval = true)
   @OrderBy("stageOrder ASC")
