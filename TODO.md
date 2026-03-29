@@ -147,30 +147,30 @@
 ## Phase 5: Distributed Tracing
 
 ### 5.1 Trace context propagation via RabbitMQ headers
-- [ ] Create `common/src/main/java/cicd/observability/TraceContextHelper.java`:
+- [x] Create `common/src/main/java/cicd/observability/TraceContextHelper.java`:
   - `injectContext(MessageProperties props)` — uses `W3CTraceContextPropagator` to inject current span context into AMQP message headers
   - `extractContext(MessageProperties props)` — extracts context from AMQP headers, returns `Context`
   - **Files**: `common/src/main/java/cicd/observability/TraceContextHelper.java`, `common/build.gradle` (add otel-api + otel-context dependency)
 
-- [ ] Create `server/src/main/java/cicd/config/TracingRabbitTemplate.java` (or modify `RabbitMqConfig`):
+- [x] Create `server/src/main/java/cicd/config/TracingRabbitTemplate.java` (or modify `RabbitMqConfig`):
   - Wrap `RabbitTemplate` with a `MessagePostProcessor` that calls `TraceContextHelper.injectContext()` on every outgoing message
   - **Files**: `server/src/main/java/cicd/config/RabbitMqConfig.java`
 
-- [ ] Do the same for worker's `RabbitTemplate`:
+- [x] Do the same for worker's `RabbitTemplate`:
   - **Files**: `worker/src/main/java/cicd/config/RabbitMqConfig.java`
 
 ### 5.2 Add traceId field to messages
-- [ ] Add `String traceId` field to `PipelineExecuteMessage`:
+- [x] Add `String traceId` field to `PipelineExecuteMessage`:
   - Server sets this when creating the root span, before publishing
   - Worker reads it and stores alongside the run
   - **Files**: `common/src/main/java/cicd/messaging/PipelineExecuteMessage.java`
 
-- [ ] Add `String traceId` field to `StatusUpdateMessage`:
+- [x] Add `String traceId` field to `StatusUpdateMessage`:
   - Worker sets this on pipeline-level status updates so server can persist trace_id
   - **Files**: `common/src/main/java/cicd/messaging/StatusUpdateMessage.java`
 
 ### 5.3 Instrument PipelineExecutionController (server-side root span creation)
-- [ ] In `PipelineExecutionController` (or wherever the `PipelineRunEntity` is created and `PipelineExecuteMessage` is published):
+- [x] In `PipelineExecutionController` (or wherever the `PipelineRunEntity` is created and `PipelineExecuteMessage` is published):
   - Create root span: `tracer.spanBuilder("pipeline: " + name).startSpan()`
   - Extract trace-id: `span.getSpanContext().getTraceId()`
   - Set `traceId` on the `PipelineRunEntity` before saving to DB
@@ -182,7 +182,7 @@
   - **Files**: `server/src/main/java/cicd/api/controller/PipelineExecutionController.java`, `server/src/main/java/cicd/service/` (wherever PipelineRunEntity is created)
 
 ### 5.4 Instrument PipelineOrchestrationListener (worker-side pipeline span)
-- [ ] In `onPipelineExecute()`:
+- [x] In `onPipelineExecute()`:
   - Extract parent context from incoming message headers using `TraceContextHelper.extractContext()`
   - Create child span: `tracer.spanBuilder("pipeline: " + name).setParent(extractedCtx).startSpan()`
   - Set span attributes: `run_no`, `pipeline` (as required by spec)
@@ -190,18 +190,18 @@
   - Make this span the current context using `span.makeCurrent()` (so child spans auto-attach)
   - **Files**: `worker/src/main/java/cicd/listener/PipelineOrchestrationListener.java`
 
-- [ ] For each stage loop iteration:
+- [x] For each stage loop iteration:
   - Create child span: `tracer.spanBuilder("stage: " + stageName).startSpan()`
   - Set as current before dispatching jobs
   - End after stage completes
   - **Files**: `worker/src/main/java/cicd/listener/PipelineOrchestrationListener.java`
 
-- [ ] When dispatching `JobExecuteMessage`:
+- [x] When dispatching `JobExecuteMessage`:
   - Inject current span context (which is the stage span) into message headers
   - **Files**: `worker/src/main/java/cicd/listener/PipelineOrchestrationListener.java`
 
 ### 5.5 Instrument JobExecutionListener (job spans)
-- [ ] In `onJobExecute()`:
+- [x] In `onJobExecute()`:
   - Extract parent context from message headers (stage span)
   - Create child span: `tracer.spanBuilder("job: " + jobName).startSpan()`
   - Set attributes: pipeline, stage, job, image
@@ -210,16 +210,16 @@
   - **Files**: `worker/src/main/java/cicd/listener/JobExecutionListener.java`
 
 ### 5.6 Persist trace-id from StatusUpdateMessage
-- [ ] In `StatusUpdateListener.handlePipeline()`:
+- [x] In `StatusUpdateListener.handlePipeline()`:
   - If `msg.getTraceId() != null`, set `run.setTraceId(msg.getTraceId())`
   - **Files**: `server/src/main/java/cicd/listener/StatusUpdateListener.java`
 
-- [ ] In `StatusUpdatePublisher.pipelineRunning()`:
+- [x] In `StatusUpdatePublisher.pipelineRunning()`:
   - Extract current trace-id from OTel context: `Span.current().getSpanContext().getTraceId()`
   - Set on the `StatusUpdateMessage`
   - **Files**: `worker/src/main/java/cicd/service/StatusUpdatePublisher.java`
 
-- [ ] Verify: run a pipeline, check DB: `SELECT trace_id FROM pipeline_runs WHERE run_no = 1`
+- [x] Verify: run a pipeline, check DB: `SELECT trace_id FROM pipeline_runs WHERE run_no = 1`
 
 ---
 

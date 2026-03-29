@@ -1,5 +1,6 @@
 package cicd.config;
 
+import cicd.observability.TraceContextHelper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.amqp.core.Binding;
@@ -197,7 +198,7 @@ public class RabbitMqConfig {
     return new Jackson2JsonMessageConverter(mapper);
   }
 
-  /** Creates the primary RabbitTemplate with JSON converter. */
+  /** Creates the primary RabbitTemplate with JSON converter and trace context injection. */
   @Bean
   @Primary
   public RabbitTemplate rabbitTemplate(
@@ -206,6 +207,11 @@ public class RabbitMqConfig {
     RabbitTemplate template =
         new RabbitTemplate(connectionFactory);
     template.setMessageConverter(jsonMessageConverter);
+    template.addBeforePublishPostProcessors(message -> {
+      TraceContextHelper.injectContext(
+          message.getMessageProperties().getHeaders());
+      return message;
+    });
     return template;
   }
 

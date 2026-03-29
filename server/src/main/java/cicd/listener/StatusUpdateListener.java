@@ -14,6 +14,7 @@ import java.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 /**
@@ -31,14 +32,14 @@ public class StatusUpdateListener {
   private final JobRunRepository jobRunRepo;
   private final CicdMetrics metrics;
 
-  /** Creates a listener with the required repositories and metrics. */
+  /** Creates a listener with the required repositories and optional metrics. */
   public StatusUpdateListener(PipelineRunRepository pipelineRunRepo,
       StageRunRepository stageRunRepo, JobRunRepository jobRunRepo,
-      CicdMetrics metrics) {
+      ObjectProvider<CicdMetrics> metricsProvider) {
     this.pipelineRunRepo = pipelineRunRepo;
     this.stageRunRepo = stageRunRepo;
     this.jobRunRepo = jobRunRepo;
-    this.metrics = metrics;
+    this.metrics = metricsProvider.getIfAvailable();
   }
 
   /** Handles incoming status update messages. */
@@ -69,10 +70,13 @@ public class StatusUpdateListener {
     if (msg.getEndTime() != null) {
       run.setEndTime(msg.getEndTime());
     }
+    if (msg.getTraceId() != null) {
+      run.setTraceId(msg.getTraceId());
+    }
     pipelineRunRepo.save(run);
     pipelineRunRepo.flush();
 
-    if (isTerminal(msg.getStatus())
+    if (metrics != null && isTerminal(msg.getStatus())
         && msg.getStartTime() != null && msg.getEndTime() != null) {
       long durationMs = Duration.between(
           msg.getStartTime(), msg.getEndTime()).toMillis();
@@ -113,7 +117,7 @@ public class StatusUpdateListener {
     stageRunRepo.save(stageRun);
     stageRunRepo.flush();
 
-    if (isTerminal(msg.getStatus())
+    if (metrics != null && isTerminal(msg.getStatus())
         && msg.getStartTime() != null && msg.getEndTime() != null) {
       long durationMs = Duration.between(
           msg.getStartTime(), msg.getEndTime()).toMillis();
@@ -157,7 +161,7 @@ public class StatusUpdateListener {
     jobRunRepo.save(jobRun);
     jobRunRepo.flush();
 
-    if (isTerminal(msg.getStatus())
+    if (metrics != null && isTerminal(msg.getStatus())
         && msg.getStartTime() != null && msg.getEndTime() != null) {
       long durationMs = Duration.between(
           msg.getStartTime(), msg.getEndTime()).toMillis();

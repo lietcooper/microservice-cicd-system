@@ -2,6 +2,8 @@ package cicd.config;
 
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
+import io.opentelemetry.context.propagation.ContextPropagators;
 import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.resources.Resource;
@@ -37,6 +39,8 @@ public class OpenTelemetryConfig {
 
     return OpenTelemetrySdk.builder()
         .setTracerProvider(tracerProvider)
+        .setPropagators(ContextPropagators.create(
+            W3CTraceContextPropagator.getInstance()))
         .buildAndRegisterGlobal();
   }
 

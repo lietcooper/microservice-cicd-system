@@ -10,6 +10,10 @@ dependencies {
 
     implementation 'org.slf4j:slf4j-api:2.0.12'
 
+    implementation platform('io.opentelemetry:opentelemetry-bom:1.40.0')
+    implementation 'io.opentelemetry:opentelemetry-api'
+    implementation 'io.opentelemetry:opentelemetry-context'
+
     compileOnly 'org.projectlombok:lombok:1.18.30'
     annotationProcessor 'org.projectlombok:lombok:1.18.30'
 }

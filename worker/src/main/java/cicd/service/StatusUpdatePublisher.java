@@ -2,6 +2,7 @@ package cicd.service;
 
 import cicd.config.RabbitMqConfig;
 import cicd.messaging.StatusUpdateMessage;
+import io.opentelemetry.api.trace.Span;
 import java.time.OffsetDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,13 +29,18 @@ public class StatusUpdatePublisher {
 
   // --- Pipeline-level updates ---
 
-  /** Publishes a pipeline-running status update. */
+  /** Publishes a pipeline-running status update with trace-id. */
   public void pipelineRunning(Long pipelineRunId,
       String pipelineName, int runNo) {
     StatusUpdateMessage msg =
         buildPipeline(pipelineRunId, pipelineName, runNo);
     msg.setStatus("RUNNING");
     msg.setStartTime(OffsetDateTime.now());
+    String traceId = Span.current().getSpanContext().getTraceId();
+    if (traceId != null && !traceId.equals(
+        "00000000000000000000000000000000")) {
+      msg.setTraceId(traceId);
+    }
     publish(msg);
   }
 
