@@ -407,17 +407,17 @@
 ## Phase 11: Testing & Validation
 
 ### 11.1 Unit tests for new code
-- [ ] Test `CicdMetrics`: verify counters increment, timers record, correct tags
+- [x] Test `CicdMetrics`: verify counters increment, timers record, correct tags
   - **Files**: `server/src/test/java/cicd/observability/CicdMetricsTest.java`
 
-- [ ] Test `TraceContextHelper`: verify inject/extract roundtrip with mock `MessageProperties`
+- [x] Test `TraceContextHelper`: verify inject/extract roundtrip with mock `MessageProperties`
   - **Files**: `common/src/test/java/cicd/observability/TraceContextHelperTest.java`
 
-- [ ] Test trace-id in `ReportService`: verify traceId appears in DTOs
-  - **Files**: `server/src/test/java/cicd/service/ReportServiceTest.java` (extend existing)
+- [x] Test trace-id in `ReportService`: verify traceId appears in DTOs
+  - **Files**: `server/src/test/java/cicd/service/ReportServiceTraceIdTest.java`
 
-- [ ] Test `ReportCmd` output includes trace-id line
-  - **Files**: `cli/src/test/java/cicd/cmd/ReportCmdTest.java` (extend existing)
+- [x] Test `ReportCmd` output includes trace-id line
+  - **Files**: `cli/src/test/java/cicd/cmd/ReportCmdTraceIdTest.java`
 
 ### 11.2 Integration validation
 - [ ] Deploy full stack via Helm, run a test pipeline, verify:
