@@ -2,6 +2,7 @@ package cicd.listener;
 
 import cicd.config.RabbitMqConfig;
 import cicd.messaging.StatusUpdateMessage;
+import cicd.observability.CicdMetrics;
 import cicd.persistence.entity.JobRunEntity;
 import cicd.persistence.entity.PipelineRunEntity;
 import cicd.persistence.entity.RunStatus;
@@ -9,6 +10,7 @@ import cicd.persistence.entity.StageRunEntity;
 import cicd.persistence.repository.JobRunRepository;
 import cicd.persistence.repository.PipelineRunRepository;
 import cicd.persistence.repository.StageRunRepository;
+import java.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -27,13 +29,16 @@ public class StatusUpdateListener {
   private final PipelineRunRepository pipelineRunRepo;
   private final StageRunRepository stageRunRepo;
   private final JobRunRepository jobRunRepo;
+  private final CicdMetrics metrics;
 
-  /** Creates a listener with the required repositories. */
+  /** Creates a listener with the required repositories and metrics. */
   public StatusUpdateListener(PipelineRunRepository pipelineRunRepo,
-      StageRunRepository stageRunRepo, JobRunRepository jobRunRepo) {
+      StageRunRepository stageRunRepo, JobRunRepository jobRunRepo,
+      CicdMetrics metrics) {
     this.pipelineRunRepo = pipelineRunRepo;
     this.stageRunRepo = stageRunRepo;
     this.jobRunRepo = jobRunRepo;
+    this.metrics = metrics;
   }
 
   /** Handles incoming status update messages. */
@@ -66,6 +71,14 @@ public class StatusUpdateListener {
     }
     pipelineRunRepo.save(run);
     pipelineRunRepo.flush();
+
+    if (isTerminal(msg.getStatus())
+        && msg.getStartTime() != null && msg.getEndTime() != null) {
+      long durationMs = Duration.between(
+          msg.getStartTime(), msg.getEndTime()).toMillis();
+      metrics.recordPipelineCompleted(
+          msg.getPipelineName(), msg.getStatus(), durationMs);
+    }
   }
 
   private void handleStage(StatusUpdateMessage msg) {
@@ -99,6 +112,14 @@ public class StatusUpdateListener {
     }
     stageRunRepo.save(stageRun);
     stageRunRepo.flush();
+
+    if (isTerminal(msg.getStatus())
+        && msg.getStartTime() != null && msg.getEndTime() != null) {
+      long durationMs = Duration.between(
+          msg.getStartTime(), msg.getEndTime()).toMillis();
+      metrics.recordStageCompleted(
+          msg.getPipelineName(), msg.getStageName(), durationMs);
+    }
   }
 
   private void handleJob(StatusUpdateMessage msg) {
@@ -135,5 +156,17 @@ public class StatusUpdateListener {
     }
     jobRunRepo.save(jobRun);
     jobRunRepo.flush();
+
+    if (isTerminal(msg.getStatus())
+        && msg.getStartTime() != null && msg.getEndTime() != null) {
+      long durationMs = Duration.between(
+          msg.getStartTime(), msg.getEndTime()).toMillis();
+      metrics.recordJobCompleted(msg.getPipelineName(), msg.getStageName(),
+          msg.getJobName(), msg.getStatus(), durationMs);
+    }
+  }
+
+  private boolean isTerminal(String status) {
+    return "SUCCESS".equals(status) || "FAILED".equals(status);
   }
 }
