@@ -48,57 +48,57 @@ public class JobExecutionListener {
     MDC.put("job", msg.getJobName());
     MDC.put("source", "system");
     try {
-    log.info("Job Worker: executing '{}' [{}]",
-        msg.getJobName(), msg.getImage());
+      log.info("Job Worker: executing '{}' [{}]",
+          msg.getJobName(), msg.getImage());
 
-    // Update job status to RUNNING via MQ
-    statusPublisher.jobStarted(msg.getPipelineRunId(),
-        msg.getPipelineName(), msg.getRunNo(),
-        msg.getStageName(), msg.getJobName());
+      // Update job status to RUNNING via MQ
+      statusPublisher.jobStarted(msg.getPipelineRunId(),
+          msg.getPipelineName(), msg.getRunNo(),
+          msg.getStageName(), msg.getJobName());
 
-    eventPublisher.publishJobStarted(msg.getPipelineRunId(),
-        msg.getPipelineName(), msg.getRunNo(),
-        msg.getStageName(), msg.getJobName());
+      eventPublisher.publishJobStarted(msg.getPipelineRunId(),
+          msg.getPipelineName(), msg.getRunNo(),
+          msg.getStageName(), msg.getJobName());
 
-    // Execute in Docker
-    JobResult result = dockerRunner.runJob(
-        msg.getImage(), msg.getScripts(), msg.getWorkspacePath());
+      // Execute in Docker
+      JobResult result = dockerRunner.runJob(
+          msg.getImage(), msg.getScripts(), msg.getWorkspacePath());
 
-    if (result.output() != null && !result.output().isBlank()) {
-      result.output().lines().forEach(l -> log.info("{}", l));
-    }
+      if (result.output() != null && !result.output().isBlank()) {
+        result.output().lines().forEach(l -> log.info("{}", l));
+      }
 
-    // Update job status via MQ
-    statusPublisher.jobCompleted(msg.getPipelineRunId(),
-        msg.getPipelineName(), msg.getRunNo(),
-        msg.getStageName(), msg.getJobName(), result.ok());
+      // Update job status via MQ
+      statusPublisher.jobCompleted(msg.getPipelineRunId(),
+          msg.getPipelineName(), msg.getRunNo(),
+          msg.getStageName(), msg.getJobName(), result.ok());
 
-    eventPublisher.publishJobCompleted(msg.getPipelineRunId(),
-        msg.getPipelineName(), msg.getRunNo(),
-        msg.getStageName(), msg.getJobName(), result.ok());
+      eventPublisher.publishJobCompleted(msg.getPipelineRunId(),
+          msg.getPipelineName(), msg.getRunNo(),
+          msg.getStageName(), msg.getJobName(), result.ok());
 
-    // Publish result back to orchestrator
-    JobResultMessage resultMsg = new JobResultMessage();
-    resultMsg.setPipelineRunId(msg.getPipelineRunId());
-    resultMsg.setCorrelationId(msg.getCorrelationId());
-    resultMsg.setJobName(msg.getJobName());
-    resultMsg.setStageName(msg.getStageName());
-    resultMsg.setPipelineName(msg.getPipelineName());
-    resultMsg.setSuccess(result.ok());
-    resultMsg.setExitCode(result.exitCode());
-    resultMsg.setOutput(result.output());
-    resultMsg.setAllowFailure(msg.isAllowFailure());
+      // Publish result back to orchestrator
+      JobResultMessage resultMsg = new JobResultMessage();
+      resultMsg.setPipelineRunId(msg.getPipelineRunId());
+      resultMsg.setCorrelationId(msg.getCorrelationId());
+      resultMsg.setJobName(msg.getJobName());
+      resultMsg.setStageName(msg.getStageName());
+      resultMsg.setPipelineName(msg.getPipelineName());
+      resultMsg.setSuccess(result.ok());
+      resultMsg.setExitCode(result.exitCode());
+      resultMsg.setOutput(result.output());
+      resultMsg.setAllowFailure(msg.isAllowFailure());
 
-    rabbitTemplate.convertAndSend(
-        RabbitMqConfig.JOB_RESULTS_EXCHANGE,
-        RabbitMqConfig.JOB_RESULT_KEY,
-        resultMsg);
+      rabbitTemplate.convertAndSend(
+          RabbitMqConfig.JOB_RESULTS_EXCHANGE,
+          RabbitMqConfig.JOB_RESULT_KEY,
+          resultMsg);
 
-    if (result.ok()) {
-      log.info("Job '{}' passed", msg.getJobName());
-    } else {
-      log.error("Job '{}' failed", msg.getJobName());
-    }
+      if (result.ok()) {
+        log.info("Job '{}' passed", msg.getJobName());
+      } else {
+        log.error("Job '{}' failed", msg.getJobName());
+      }
     } finally {
       MDC.clear();
     }

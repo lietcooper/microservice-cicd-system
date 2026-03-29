@@ -65,17 +65,16 @@ public class PipelineOrchestrationListener {
     MDC.put("run_no", String.valueOf(msg.getRunNo()));
     MDC.put("source", "system");
     try {
-    log.info("Orchestrator: running pipeline '{}' run #{}",
-        msg.getPipelineName(), msg.getRunNo());
+      log.info("Orchestrator: running pipeline '{}' run #{}",
+          msg.getPipelineName(), msg.getRunNo());
 
-    // Update to RUNNING via MQ
-    statusPublisher.pipelineRunning(
-        msg.getPipelineRunId(), msg.getPipelineName(), msg.getRunNo());
+      // Update to RUNNING via MQ
+      statusPublisher.pipelineRunning(
+          msg.getPipelineRunId(), msg.getPipelineName(), msg.getRunNo());
 
-    eventPublisher.publishPipelineStarted(
-        msg.getPipelineRunId(), msg.getPipelineName(), msg.getRunNo());
+      eventPublisher.publishPipelineStarted(
+          msg.getPipelineRunId(), msg.getPipelineName(), msg.getRunNo());
 
-    try {
       workspacePath = workspaceArchiveService.extractArchive(
           msg.getWorkspaceArchive());
 
@@ -89,7 +88,8 @@ public class PipelineOrchestrationListener {
 
       // Compute wave-based execution plan
       ExecutionPlanner planner = new ExecutionPlanner(pipeline);
-      List<ExecutionPlanner.WaveStageExecution> plan = planner.computeWaveOrder();
+      List<ExecutionPlanner.WaveStageExecution> plan =
+          planner.computeWaveOrder();
 
       boolean pipelineFailed = false;
       int stageOrder = 0;
@@ -226,8 +226,6 @@ public class PipelineOrchestrationListener {
       }
     } finally {
       workspaceArchiveService.cleanupWorkspace(workspacePath);
-    }
-    } finally {
       MDC.clear();
     }
   }
