@@ -353,7 +353,7 @@
 ## Phase 9: Grafana Dashboards (Configuration as Code)
 
 ### 9.1 Dashboard 1: Pipeline Overview
-- [ ] Create `helm/cicd/dashboards/pipeline-overview.json`:
+- [x] Create `helm/cicd/dashboards/pipeline-overview.json`:
   - Panel 1: Stat/bar chart — total pipeline runs by status (PromQL: `sum by (status) (cicd_pipeline_runs_total)`)
   - Panel 2: Time series — pipeline duration over time (PromQL: `histogram_quantile(0.95, rate(cicd_pipeline_duration_seconds_bucket[5m]))`)
   - Panel 3: Table — recent runs from PostgreSQL datasource (`SELECT pipeline_name, run_no, git_branch, git_hash, status, trace_id, start_time, end_time, EXTRACT(EPOCH FROM (end_time - start_time)) as duration_seconds FROM pipeline_runs ORDER BY start_time DESC LIMIT 20`)
