@@ -378,7 +378,7 @@
   - **Files**: `helm/cicd/dashboards/logs-viewer.json`
 
 ### 9.4 Dashboard 4: Trace Explorer
-- [ ] Create `helm/cicd/dashboards/trace-explorer.json`:
+- [x] Create `helm/cicd/dashboards/trace-explorer.json`:
   - Template variable: `run_no`
   - Option A (recommended): Use Grafana's built-in Tempo trace viewer panel. Query Tempo by trace-id (fetched from PostgreSQL based on run_no).
   - Option B: Embed a direct link to Tempo's trace view UI
