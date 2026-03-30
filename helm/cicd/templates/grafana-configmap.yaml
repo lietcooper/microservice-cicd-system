@@ -44,7 +44,7 @@ data:
       - name: PostgreSQL
         type: postgres
         access: proxy
-        url: {{ include "cicd.fullname" . }}-postgresql:5432
+        url: {{ .Release.Name }}-postgresql:5432
         database: {{ .Values.postgresql.database }}
         user: {{ .Values.postgresql.username }}
         secureJsonData:

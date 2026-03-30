@@ -53,7 +53,7 @@
         "sort": 1,
         "label": "Pipeline",
         "includeAll": true,
-        "allValue": ".*",
+        "allValue": ".+",
         "current": { "text": "All", "value": "$__all" }
       },
       {
@@ -65,7 +65,7 @@
         "sort": 2,
         "label": "Run Number",
         "includeAll": true,
-        "allValue": ".*",
+        "allValue": ".+",
         "current": { "text": "All", "value": "$__all" }
       },
       {
@@ -77,7 +77,7 @@
         "sort": 1,
         "label": "Stage",
         "includeAll": true,
-        "allValue": ".*",
+        "allValue": ".+",
         "current": { "text": "All", "value": "$__all" }
       },
       {
@@ -89,7 +89,7 @@
         "sort": 1,
         "label": "Job",
         "includeAll": true,
-        "allValue": ".*",
+        "allValue": ".+",
         "current": { "text": "All", "value": "$__all" }
       },
       {
@@ -101,7 +101,7 @@
         "sort": 1,
         "label": "Source",
         "includeAll": true,
-        "allValue": ".*",
+        "allValue": ".+",
         "current": { "text": "All", "value": "$__all" }
       }
     ]
