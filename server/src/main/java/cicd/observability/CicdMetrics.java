@@ -41,6 +41,7 @@ public class CicdMetrics {
 
     Timer.builder("cicd.pipeline.duration.seconds")
         .tag("pipeline", pipeline)
+        .publishPercentileHistogram()
         .register(registry)
         .record(Duration.ofMillis(durationMs));
   }
@@ -57,6 +58,7 @@ public class CicdMetrics {
     Timer.builder("cicd.stage.duration.seconds")
         .tag("pipeline", pipeline)
         .tag("stage", stage)
+        .publishPercentileHistogram()
         .register(registry)
         .record(Duration.ofMillis(durationMs));
   }
@@ -84,6 +86,7 @@ public class CicdMetrics {
         .tag("pipeline", pipeline)
         .tag("stage", stage)
         .tag("job", job)
+        .publishPercentileHistogram()
         .register(registry)
         .record(Duration.ofMillis(durationMs));
   }
