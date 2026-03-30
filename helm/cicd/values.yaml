@@ -62,53 +62,69 @@ rabbitmq:
 
 # =============================================================
 # OpenTelemetry Collector
+# Single Deployment that receives OTLP from server/worker and
+# fans out to Prometheus (metrics), Loki (logs), Tempo (traces).
+# Set enabled: false if using an external collector.
 # =============================================================
 otelCollector:
   enabled: true
   image:
     repository: otel/opentelemetry-collector-contrib
-    tag: 0.104.0
+    tag: 0.104.0        # contrib image needed for lokiexporter
   ports:
-    grpc: 4317
-    http: 4318
-    healthCheck: 13133
+    grpc: 4317           # OTLP gRPC receiver (server/worker export here)
+    http: 4318           # OTLP HTTP receiver (alternative ingest)
+    healthCheck: 13133   # health_check extension for liveness probe
 
 # =============================================================
 # Prometheus
+# Scrapes /actuator/prometheus on server (:8080) and worker (:8081).
+# Stores 5 custom cicd_* metrics plus Spring Boot auto-metrics.
+# Set enabled: false to use an external Prometheus instance.
 # =============================================================
 prometheus:
   enabled: true
   image:
     repository: prom/prometheus
     tag: v2.53.0
-  storage: 5Gi
+  storage: 5Gi           # PVC size for metrics retention
   port: 9090
-  scrapeInterval: 15s
+  scrapeInterval: 15s    # how often Prometheus polls the actuator endpoints
 
 # =============================================================
 # Loki
+# Receives structured JSON logs from OTel Collector.
+# Single-tenant, filesystem-backed (no object storage needed).
+# Set enabled: false to use an external Loki instance.
 # =============================================================
 loki:
   enabled: true
   image:
     repository: grafana/loki
     tag: 3.1.0
-  storage: 5Gi
+  storage: 5Gi           # PVC size for log retention
   port: 3100
 
 # =============================================================
 # Tempo
+# Receives OTLP traces from OTel Collector.
+# Local filesystem backend (no object storage needed).
+# Set enabled: false to use an external Tempo instance.
 # =============================================================
 tempo:
   enabled: true
   image:
     repository: grafana/tempo
     tag: 2.5.0
-  storage: 5Gi
+  storage: 5Gi           # PVC size for trace retention
   port: 3200
 
 # =============================================================
 # Grafana
+# Pre-provisioned with 4 datasources (Prometheus, Loki, Tempo,
+# PostgreSQL) and 4 dashboards (pipeline overview, stage/job
+# breakdown, logs viewer, trace explorer).
+# Set enabled: false to use an external Grafana instance.
 # =============================================================
 grafana:
   enabled: true
@@ -117,7 +133,7 @@ grafana:
     tag: 11.1.0
   port: 3000
   service:
-    type: ClusterIP
+    type: ClusterIP      # change to NodePort or LoadBalancer for external access
     port: 3000
-  adminUser: admin
-  adminPassword: admin
+  adminUser: admin       # initial admin username
+  adminPassword: admin   # initial admin password (change in production)

@@ -434,14 +434,14 @@
 
 ## Phase 12: Documentation
 
-- [ ] Update `README.md`:
+- [x] Update `README.md`:
   - Add Observability section explaining the stack
   - Document how to access Grafana (port-forward command)
   - Document dashboard descriptions
   - List the substitution justifications if any component was swapped
   - **Files**: `README.md`
 
-- [ ] Update Helm `values.yaml` with inline comments for all new config options
+- [x] Update Helm `values.yaml` with inline comments for all new config options
   - **Files**: `helm/cicd/values.yaml`
 
 ---
