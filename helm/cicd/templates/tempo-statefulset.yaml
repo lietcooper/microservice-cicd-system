@@ -19,6 +19,19 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/component: tempo
     spec:
+      securityContext:
+        fsGroup: 10001
+        runAsUser: 10001
+        runAsGroup: 10001
+      initContainers:
+        - name: init-permissions
+          image: busybox:1.36
+          command: ["sh", "-c", "chown -R 10001:10001 /var/tempo"]
+          volumeMounts:
+            - name: data
+              mountPath: /var/tempo
+          securityContext:
+            runAsUser: 0
       containers:
         - name: tempo
           image: "{{ .Values.tempo.image.repository }}:{{ .Values.tempo.image.tag }}"
@@ -57,6 +70,7 @@ spec:
     - metadata:
         name: data
       spec:
+        storageClassName: gp2
         accessModes: ["ReadWriteOnce"]
         resources:
           requests:

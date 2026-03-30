@@ -28,8 +28,4 @@ data:
           - targets:
               - {{ include "cicd.fullname" . }}-worker:{{ .Values.worker.service.port }}
 
-    storage:
-      tsdb:
-        exemplars:
-          max_exemplars: 100000
 {{- end }}

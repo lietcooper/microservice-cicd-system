@@ -20,6 +20,7 @@ import org.slf4j.MDC;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -39,6 +40,7 @@ public class JobExecutionListener {
   private final Tracer tracer;
 
   /** Creates a listener with the given dependencies. */
+  @Autowired
   public JobExecutionListener(RabbitTemplate rabbitTemplate,
       StatusEventPublisher eventPublisher,
       StatusUpdatePublisher statusPublisher,
