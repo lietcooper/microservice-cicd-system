@@ -420,15 +420,15 @@
   - **Files**: `cli/src/test/java/cicd/cmd/ReportCmdTraceIdTest.java`
 
 ### 11.2 Integration validation
-- [ ] Deploy full stack via Helm, run a test pipeline, verify:
-  - [ ] `curl server:8080/actuator/prometheus | grep cicd_` returns all 5 required metrics
-  - [ ] Grafana Dashboard 1 shows pipeline runs
-  - [ ] Grafana Dashboard 2 shows stage/job breakdown for a selected run
-  - [ ] Grafana Dashboard 3 shows logs filterable by pipeline/run_no/stage/job, both system and container sources visible
-  - [ ] Grafana Dashboard 4 shows trace hierarchy for a run
-  - [ ] `cicd report --pipeline default --run 1` outputs trace-id field
-  - [ ] Clicking trace-id in Dashboard 1 navigates to Dashboard 4
-  - [ ] Prometheus alert rules are loaded (`curl prometheus:9090/api/v1/rules`)
+- [x] Deploy full stack via Helm, run a test pipeline, verify:
+  - [x] `curl server:8080/actuator/prometheus | grep cicd_` returns all 5 required metrics
+  - [x] Grafana Dashboard 1 shows pipeline runs
+  - [x] Grafana Dashboard 2 shows stage/job breakdown for a selected run
+  - [x] Grafana Dashboard 3 shows logs filterable by pipeline/run_no/stage/job, both system and container sources visible
+  - [x] Grafana Dashboard 4 shows trace hierarchy for a run
+  - [x] `cicd report --pipeline default --run 1` outputs trace-id field
+  - [x] Clicking trace-id in Dashboard 1 navigates to Dashboard 4
+  - [x] Prometheus alert rules are loaded (`curl prometheus:9090/api/v1/rules`)
 
 ---
 
