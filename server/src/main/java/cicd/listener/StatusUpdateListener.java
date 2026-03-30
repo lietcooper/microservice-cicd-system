@@ -77,9 +77,9 @@ public class StatusUpdateListener {
     pipelineRunRepo.flush();
 
     if (metrics != null && isTerminal(msg.getStatus())
-        && msg.getStartTime() != null && msg.getEndTime() != null) {
+        && run.getStartTime() != null && run.getEndTime() != null) {
       long durationMs = Duration.between(
-          msg.getStartTime(), msg.getEndTime()).toMillis();
+          run.getStartTime(), run.getEndTime()).toMillis();
       metrics.recordPipelineCompleted(
           msg.getPipelineName(), msg.getStatus(), durationMs);
     }
@@ -118,9 +118,10 @@ public class StatusUpdateListener {
     stageRunRepo.flush();
 
     if (metrics != null && isTerminal(msg.getStatus())
-        && msg.getStartTime() != null && msg.getEndTime() != null) {
+        && stageRun.getStartTime() != null
+        && stageRun.getEndTime() != null) {
       long durationMs = Duration.between(
-          msg.getStartTime(), msg.getEndTime()).toMillis();
+          stageRun.getStartTime(), stageRun.getEndTime()).toMillis();
       metrics.recordStageCompleted(
           msg.getPipelineName(), msg.getStageName(), durationMs);
     }
@@ -162,9 +163,10 @@ public class StatusUpdateListener {
     jobRunRepo.flush();
 
     if (metrics != null && isTerminal(msg.getStatus())
-        && msg.getStartTime() != null && msg.getEndTime() != null) {
+        && jobRun.getStartTime() != null
+        && jobRun.getEndTime() != null) {
       long durationMs = Duration.between(
-          msg.getStartTime(), msg.getEndTime()).toMillis();
+          jobRun.getStartTime(), jobRun.getEndTime()).toMillis();
       metrics.recordJobCompleted(msg.getPipelineName(), msg.getStageName(),
           msg.getJobName(), msg.getStatus(), durationMs);
     }
