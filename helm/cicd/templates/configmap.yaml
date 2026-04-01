@@ -13,3 +13,8 @@ data:
   # ---- PostgreSQL (server only) ----
   SPRING_DATASOURCE_URL: {{ include "cicd.postgresql.url" . | quote }}
   SPRING_DATASOURCE_USERNAME: {{ include "cicd.postgresql.username" . | quote }}
+
+  # ---- OpenTelemetry ----
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://{{ include "cicd.fullname" . }}-otel-collector:4317"
+  OTEL_METRICS_EXPORTER: none
+  OTEL_LOGS_EXPORTER: otlp

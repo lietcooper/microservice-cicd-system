@@ -2,6 +2,7 @@ package cicd.listener;
 
 import cicd.config.RabbitMqConfig;
 import cicd.messaging.StatusUpdateMessage;
+import cicd.observability.CicdMetrics;
 import cicd.persistence.entity.JobRunEntity;
 import cicd.persistence.entity.PipelineRunEntity;
 import cicd.persistence.entity.RunStatus;
@@ -9,7 +10,11 @@ import cicd.persistence.entity.StageRunEntity;
 import cicd.persistence.repository.JobRunRepository;
 import cicd.persistence.repository.PipelineRunRepository;
 import cicd.persistence.repository.StageRunRepository;
+import java.time.Duration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 /**
@@ -19,16 +24,22 @@ import org.springframework.stereotype.Component;
 @Component
 public class StatusUpdateListener {
 
+  private static final Logger log =
+      LoggerFactory.getLogger(StatusUpdateListener.class);
+
   private final PipelineRunRepository pipelineRunRepo;
   private final StageRunRepository stageRunRepo;
   private final JobRunRepository jobRunRepo;
+  private final CicdMetrics metrics;
 
-  /** Creates a listener with the required repositories. */
+  /** Creates a listener with the required repositories and optional metrics. */
   public StatusUpdateListener(PipelineRunRepository pipelineRunRepo,
-      StageRunRepository stageRunRepo, JobRunRepository jobRunRepo) {
+      StageRunRepository stageRunRepo, JobRunRepository jobRunRepo,
+      ObjectProvider<CicdMetrics> metricsProvider) {
     this.pipelineRunRepo = pipelineRunRepo;
     this.stageRunRepo = stageRunRepo;
     this.jobRunRepo = jobRunRepo;
+    this.metrics = metricsProvider.getIfAvailable();
   }
 
   /** Handles incoming status update messages. */
@@ -39,8 +50,8 @@ public class StatusUpdateListener {
       case "PIPELINE" -> handlePipeline(msg);
       case "STAGE" -> handleStage(msg);
       case "JOB" -> handleJob(msg);
-      default -> System.err.println(
-          "Unknown entity type: " + msg.getEntityType());
+      default -> log.error("Unknown entity type: {}",
+          msg.getEntityType());
     }
   }
 
@@ -48,8 +59,7 @@ public class StatusUpdateListener {
     PipelineRunEntity run = pipelineRunRepo
         .findById(msg.getPipelineRunId()).orElse(null);
     if (run == null) {
-      System.err.println("Pipeline run not found: "
-          + msg.getPipelineRunId());
+      log.error("Pipeline run not found: {}", msg.getPipelineRunId());
       return;
     }
 
@@ -60,16 +70,27 @@ public class StatusUpdateListener {
     if (msg.getEndTime() != null) {
       run.setEndTime(msg.getEndTime());
     }
+    if (msg.getTraceId() != null) {
+      run.setTraceId(msg.getTraceId());
+    }
     pipelineRunRepo.save(run);
     pipelineRunRepo.flush();
+
+    if (metrics != null && isTerminal(msg.getStatus())
+        && run.getStartTime() != null && run.getEndTime() != null) {
+      long durationMs = Duration.between(
+          run.getStartTime(), run.getEndTime()).toMillis();
+      metrics.recordPipelineCompleted(
+          msg.getPipelineName(), msg.getStatus(), durationMs);
+    }
   }
 
   private void handleStage(StatusUpdateMessage msg) {
     PipelineRunEntity pipelineRun = pipelineRunRepo
         .findById(msg.getPipelineRunId()).orElse(null);
     if (pipelineRun == null) {
-      System.err.println("Pipeline run not found for stage update: "
-          + msg.getPipelineRunId());
+      log.error("Pipeline run not found for stage update: {}",
+          msg.getPipelineRunId());
       return;
     }
 
@@ -95,6 +116,15 @@ public class StatusUpdateListener {
     }
     stageRunRepo.save(stageRun);
     stageRunRepo.flush();
+
+    if (metrics != null && isTerminal(msg.getStatus())
+        && stageRun.getStartTime() != null
+        && stageRun.getEndTime() != null) {
+      long durationMs = Duration.between(
+          stageRun.getStartTime(), stageRun.getEndTime()).toMillis();
+      metrics.recordStageCompleted(
+          msg.getPipelineName(), msg.getStageName(), durationMs);
+    }
   }
 
   private void handleJob(StatusUpdateMessage msg) {
@@ -104,10 +134,8 @@ public class StatusUpdateListener {
         .orElse(null);
 
     if (stageRun == null) {
-      System.err.println(
-          "Stage run not found for job update: pipeline="
-          + msg.getPipelineRunId()
-          + " stage=" + msg.getStageName());
+      log.error("Stage run not found for job update: pipeline={} stage={}",
+          msg.getPipelineRunId(), msg.getStageName());
       return;
     }
 
@@ -133,5 +161,18 @@ public class StatusUpdateListener {
     }
     jobRunRepo.save(jobRun);
     jobRunRepo.flush();
+
+    if (metrics != null && isTerminal(msg.getStatus())
+        && jobRun.getStartTime() != null
+        && jobRun.getEndTime() != null) {
+      long durationMs = Duration.between(
+          jobRun.getStartTime(), jobRun.getEndTime()).toMillis();
+      metrics.recordJobCompleted(msg.getPipelineName(), msg.getStageName(),
+          msg.getJobName(), msg.getStatus(), durationMs);
+    }
+  }
+
+  private boolean isTerminal(String status) {
+    return "SUCCESS".equals(status) || "FAILED".equals(status);
   }
 }

@@ -1,0 +1,59 @@
+{{- if .Values.otelCollector.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cicd.fullname" . }}-otel-collector
+  labels:
+    {{- include "cicd.labels" . | nindent 4 }}
+    app.kubernetes.io/component: otel-collector
+data:
+  otel-collector-config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      attributes/loki:
+        actions:
+          - action: insert
+            key: loki.attribute.labels
+            value: pipeline, run_no, stage, job, source
+          - action: insert
+            key: loki.resource.labels
+            value: service.name
+
+    exporters:
+      loki:
+        endpoint: http://{{ include "cicd.fullname" . }}-loki:3100/loki/api/v1/push
+
+      otlp/tempo:
+        endpoint: http://{{ include "cicd.fullname" . }}-tempo:4317
+        tls:
+          insecure: true
+
+      prometheus:
+        endpoint: 0.0.0.0:8889
+        namespace: ""
+
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
+
+    service:
+      extensions: [health_check]
+      pipelines:
+        traces:
+          receivers: [otlp]
+          exporters: [otlp/tempo]
+        metrics:
+          receivers: [otlp]
+          exporters: [prometheus]
+        logs:
+          receivers: [otlp]
+          processors: [attributes/loki]
+          exporters: [loki]
+{{- end }}

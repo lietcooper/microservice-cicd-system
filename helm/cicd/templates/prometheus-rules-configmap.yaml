@@ -1,0 +1,69 @@
+{{- if .Values.prometheus.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cicd.fullname" . }}-prometheus-rules
+  labels:
+    {{- include "cicd.labels" . | nindent 4 }}
+    app.kubernetes.io/component: prometheus
+data:
+  cicd-alerts.yml: |
+    groups:
+      - name: cicd-alerts
+        rules:
+          - alert: CicdPipelineConsecutiveFailures
+            expr: |
+              (
+                sum by (pipeline) (
+                  cicd_pipeline_runs_total{status="FAILED"}
+                )
+                -
+                sum by (pipeline) (
+                  cicd_pipeline_runs_total{status="FAILED"} offset 30m
+                )
+              ) >= 3
+              and
+              (
+                sum by (pipeline) (
+                  cicd_pipeline_runs_total{status="SUCCESS"}
+                )
+                ==
+                sum by (pipeline) (
+                  cicd_pipeline_runs_total{status="SUCCESS"} offset 30m
+                )
+              )
+            for: 0m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Pipeline {{ "{{" }} $labels.pipeline {{ "}}" }} has 3+ consecutive failures"
+              description: "Pipeline {{ "{{" }} $labels.pipeline {{ "}}" }} has had 3 or more failures without any successes in the last 30 minutes."
+
+          - alert: CicdJobDurationHigh
+            expr: |
+              histogram_quantile(0.95,
+                sum by (pipeline, stage, job, le) (
+                  rate(cicd_job_duration_seconds_bucket[15m])
+                )
+              ) > 600
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Job {{ "{{" }} $labels.job {{ "}}" }} p95 duration exceeds 10 minutes"
+              description: "Job {{ "{{" }} $labels.job {{ "}}" }} in pipeline {{ "{{" }} $labels.pipeline {{ "}}" }}/{{ "{{" }} $labels.stage {{ "}}" }} has a p95 duration of {{ "{{" }} $value | humanizeDuration {{ "}}" }} over the last 15 minutes."
+
+          - alert: CicdPipelineDurationHigh
+            expr: |
+              histogram_quantile(0.95,
+                sum by (pipeline, le) (
+                  rate(cicd_pipeline_duration_seconds_bucket[15m])
+                )
+              ) > 1800
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Pipeline {{ "{{" }} $labels.pipeline {{ "}}" }} p95 duration exceeds 30 minutes"
+              description: "Pipeline {{ "{{" }} $labels.pipeline {{ "}}" }} has a p95 duration of {{ "{{" }} $value | humanizeDuration {{ "}}" }} over the last 15 minutes."
+{{- end }}

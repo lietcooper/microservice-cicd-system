@@ -41,5 +41,8 @@ public class PipelineRunDetailResponse {
   @JsonProperty("end")
   private OffsetDateTime endTime;
 
+  @JsonProperty("trace-id")
+  private String traceId;
+
   private List<StageDto> stages;
 }

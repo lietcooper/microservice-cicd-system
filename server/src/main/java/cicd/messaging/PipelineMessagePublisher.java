@@ -1,6 +1,8 @@
 package cicd.messaging;
 
 import cicd.config.RabbitMqConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
@@ -9,6 +11,9 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class PipelineMessagePublisher {
+
+  private static final Logger log =
+      LoggerFactory.getLogger(PipelineMessagePublisher.class);
 
   private final RabbitTemplate rabbitTemplate;
 
@@ -21,6 +26,8 @@ public class PipelineMessagePublisher {
    * Publishes a pipeline execution message to the pipeline exchange.
    */
   public void publishPipelineExecute(PipelineExecuteMessage message) {
+    log.info("Publishing pipeline execute message for '{}'",
+        message.getPipelineName());
     rabbitTemplate.convertAndSend(
         RabbitMqConfig.PIPELINE_EXCHANGE,
         RabbitMqConfig.PIPELINE_EXECUTE_KEY,

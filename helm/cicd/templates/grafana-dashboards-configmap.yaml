@@ -1,0 +1,18 @@
+{{- if .Values.grafana.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cicd.fullname" . }}-grafana-dashboards
+  labels:
+    {{- include "cicd.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+data:
+  pipeline-overview.json: |
+    {{- .Files.Get "dashboards/pipeline-overview.json" | nindent 4 }}
+  stage-job-breakdown.json: |
+    {{- .Files.Get "dashboards/stage-job-breakdown.json" | nindent 4 }}
+  logs-viewer.json: |
+    {{- .Files.Get "dashboards/logs-viewer.json" | nindent 4 }}
+  trace-explorer.json: |
+    {{- .Files.Get "dashboards/trace-explorer.json" | nindent 4 }}
+{{- end }}

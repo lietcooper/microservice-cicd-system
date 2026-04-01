@@ -1,7 +1,6 @@
 package cicd.messaging;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -11,7 +10,6 @@ import lombok.NoArgsConstructor;
  */
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class PipelineExecuteMessage {
 
@@ -22,5 +20,32 @@ public class PipelineExecuteMessage {
   private byte[] workspaceArchive;
   private String gitBranch;
   private String gitCommit;
+  private String traceId;
+
+  /** Backward-compatible constructor without traceId. */
+  @SuppressWarnings("checkstyle:ParameterNumber")
+  public PipelineExecuteMessage(Long pipelineRunId,
+      String pipelineName, int runNo, String pipelineYaml,
+      byte[] workspaceArchive, String gitBranch,
+      String gitCommit) {
+    this.pipelineRunId = pipelineRunId;
+    this.pipelineName = pipelineName;
+    this.runNo = runNo;
+    this.pipelineYaml = pipelineYaml;
+    this.workspaceArchive = workspaceArchive;
+    this.gitBranch = gitBranch;
+    this.gitCommit = gitCommit;
+  }
+
+  /** Full constructor including traceId. */
+  @SuppressWarnings("checkstyle:ParameterNumber")
+  public PipelineExecuteMessage(Long pipelineRunId,
+      String pipelineName, int runNo, String pipelineYaml,
+      byte[] workspaceArchive, String gitBranch,
+      String gitCommit, String traceId) {
+    this(pipelineRunId, pipelineName, runNo, pipelineYaml,
+        workspaceArchive, gitBranch, gitCommit);
+    this.traceId = traceId;
+  }
 
 }

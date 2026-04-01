@@ -44,4 +44,7 @@ public class StatusUpdateMessage {
 
   private Boolean allowFailure;
 
+  /** Trace ID for pipeline-level updates; null for stage/job updates. */
+  private String traceId;
+
 }

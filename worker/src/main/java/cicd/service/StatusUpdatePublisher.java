@@ -2,7 +2,10 @@ package cicd.service;
 
 import cicd.config.RabbitMqConfig;
 import cicd.messaging.StatusUpdateMessage;
+import io.opentelemetry.api.trace.Span;
 import java.time.OffsetDateTime;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
@@ -12,6 +15,9 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class StatusUpdatePublisher {
+
+  private static final Logger log =
+      LoggerFactory.getLogger(StatusUpdatePublisher.class);
 
   private final RabbitTemplate rabbitTemplate;
 
@@ -23,13 +29,18 @@ public class StatusUpdatePublisher {
 
   // --- Pipeline-level updates ---
 
-  /** Publishes a pipeline-running status update. */
+  /** Publishes a pipeline-running status update with trace-id. */
   public void pipelineRunning(Long pipelineRunId,
       String pipelineName, int runNo) {
     StatusUpdateMessage msg =
         buildPipeline(pipelineRunId, pipelineName, runNo);
     msg.setStatus("RUNNING");
     msg.setStartTime(OffsetDateTime.now());
+    String traceId = Span.current().getSpanContext().getTraceId();
+    if (traceId != null && !traceId.equals(
+        "00000000000000000000000000000000")) {
+      msg.setTraceId(traceId);
+    }
     publish(msg);
   }
 
@@ -155,6 +166,8 @@ public class StatusUpdatePublisher {
   }
 
   private void publish(StatusUpdateMessage msg) {
+    log.debug("Publishing status update: entity={} status={}",
+        msg.getEntityType(), msg.getStatus());
     rabbitTemplate.convertAndSend(
         RabbitMqConfig.STATUS_EXCHANGE,
         RabbitMqConfig.STATUS_UPDATE_KEY,

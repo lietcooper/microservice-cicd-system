@@ -7,6 +7,19 @@ plugins {
 dependencies {
     implementation project(':common')
 
+    implementation platform('io.opentelemetry:opentelemetry-bom:1.40.0')
+    implementation 'io.opentelemetry:opentelemetry-api'
+    implementation 'io.opentelemetry:opentelemetry-sdk'
+    implementation 'io.opentelemetry:opentelemetry-exporter-otlp'
+    implementation 'io.opentelemetry:opentelemetry-sdk-extension-autoconfigure'
+
+    implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
+    implementation 'io.opentelemetry.instrumentation:opentelemetry-logback-appender-1.0:2.6.0-alpha'
+
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+
     implementation 'org.springframework.boot:spring-boot-starter-amqp:3.4.2'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.16.1'
 

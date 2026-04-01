@@ -50,6 +50,7 @@ spec:
     - metadata:
         name: rmqdata
       spec:
+        storageClassName: gp2
         accessModes: ["ReadWriteOnce"]
         resources:
           requests:

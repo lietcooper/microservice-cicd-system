@@ -13,6 +13,9 @@ import cicd.service.GitRepositoryService;
 import cicd.service.WorkspaceArchiveService;
 import cicd.util.PipelineFinder;
 import cicd.validator.Validator;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Scope;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -45,6 +48,10 @@ public class PipelineExecutionController {
 
   @Autowired
   private WorkspaceArchiveService workspaceArchiveService;
+
+  @Autowired
+  private Tracer tracer =
+      io.opentelemetry.api.OpenTelemetry.noop().getTracer("cicd-server");
 
   /** Accepts a pipeline execution request and queues it. */
   @PostMapping("/execute")
@@ -116,6 +123,11 @@ public class PipelineExecutionController {
                 + String.join("\n", errors));
       }
 
+      // Create initiation span — its trace-id becomes the pipeline trace-id
+      Span initiationSpan = tracer.spanBuilder(
+          "pipeline.initiate: " + pipeline.name).startSpan();
+      String traceId = initiationSpan.getSpanContext().getTraceId();
+
       PipelineRunEntity pipelineRun = new PipelineRunEntity();
       pipelineRun.setPipelineName(pipeline.name);
       pipelineRun.setRunNo(
@@ -125,6 +137,7 @@ public class PipelineExecutionController {
       pipelineRun.setGitHash(actualCommit);
       pipelineRun.setGitBranch(actualBranch);
       pipelineRun.setGitRepo(repoUrl);
+      pipelineRun.setTraceId(traceId);
       pipelineRun = pipelineRunRepo.save(pipelineRun);
       pipelineRunRepo.flush();
 
@@ -139,10 +152,11 @@ public class PipelineExecutionController {
               yamlContent,
               workspaceArchive,
               actualBranch,
-              actualCommit
+              actualCommit,
+              traceId
           );
 
-      try {
+      try (Scope ignored = initiationSpan.makeCurrent()) {
         messagePublisher.publishPipelineExecute(message);
       } catch (AmqpException ex) {
         pipelineRun.setStatus(RunStatus.FAILED);
@@ -152,6 +166,8 @@ public class PipelineExecutionController {
             .status(HttpStatus.SERVICE_UNAVAILABLE)
             .body("Message queue unavailable: "
                 + ex.getMessage());
+      } finally {
+        initiationSpan.end();
       }
 
       ExecutePipelineResponse response =

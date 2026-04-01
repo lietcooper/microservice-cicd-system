@@ -70,6 +70,7 @@ public class ReportService {
     response.setGitHash(run.getGitHash());
     response.setStartTime(run.getStartTime());
     response.setEndTime(run.getEndTime());
+    response.setTraceId(run.getTraceId());
 
     List<StageRunEntity> stages = stageRunRepository
         .findByPipelineRunIdOrderByStageOrderAsc(run.getId());
@@ -101,6 +102,7 @@ public class ReportService {
     response.setGitHash(run.getGitHash());
     response.setStartTime(run.getStartTime());
     response.setEndTime(run.getEndTime());
+    response.setTraceId(run.getTraceId());
 
     StageRunEntity stageRun = stageRunRepository
         .findByPipelineRunIdAndStageName(
@@ -138,6 +140,7 @@ public class ReportService {
     response.setGitHash(run.getGitHash());
     response.setStartTime(run.getStartTime());
     response.setEndTime(run.getEndTime());
+    response.setTraceId(run.getTraceId());
 
     StageRunEntity stageRun = stageRunRepository
         .findByPipelineRunIdAndStageName(
@@ -179,6 +182,7 @@ public class ReportService {
     dto.setGitHash(entity.getGitHash());
     dto.setStartTime(entity.getStartTime());
     dto.setEndTime(entity.getEndTime());
+    dto.setTraceId(entity.getTraceId());
     return dto;
   }
 

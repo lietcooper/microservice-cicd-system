@@ -1,0 +1,121 @@
+{
+  "uid": "cicd-trace-explorer",
+  "title": "CI/CD - Trace Explorer",
+  "description": "View trace hierarchy (pipeline -> stage -> job) for a given run",
+  "tags": ["cicd"],
+  "timezone": "browser",
+  "editable": true,
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "refresh": "",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Trace ID Lookup",
+      "type": "table",
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "${DS_POSTGRESQL}" },
+      "targets": [
+        {
+          "rawSql": "SELECT pipeline_name AS \"Pipeline\", run_no AS \"Run\", status AS \"Status\", trace_id AS \"Trace ID\", start_time AS \"Start Time\", end_time AS \"End Time\" FROM pipeline_runs WHERE ('$traceId' = '' OR trace_id = '$traceId') AND ('$run_no' = '' OR (run_no = CAST('$run_no' AS INTEGER) AND pipeline_name = '$pipeline')) ORDER BY start_time DESC LIMIT 1",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Status" },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": { "type": "color-background", "mode": "basic" }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  { "type": "value", "options": { "SUCCESS": { "color": "green", "text": "SUCCESS" } } },
+                  { "type": "value", "options": { "FAILED": { "color": "red", "text": "FAILED" } } },
+                  { "type": "value", "options": { "RUNNING": { "color": "yellow", "text": "RUNNING" } } },
+                  { "type": "value", "options": { "PENDING": { "color": "blue", "text": "PENDING" } } }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "footer": { "show": false }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Trace View",
+      "type": "traces",
+      "gridPos": { "h": 20, "w": 24, "x": 0, "y": 4 },
+      "datasource": { "type": "tempo", "uid": "${DS_TEMPO}" },
+      "targets": [
+        {
+          "queryType": "traceql",
+          "query": "$traceId",
+          "refId": "A"
+        }
+      ],
+      "options": {}
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "DS_POSTGRESQL",
+        "type": "datasource",
+        "query": "postgres",
+        "current": { "text": "PostgreSQL", "value": "PostgreSQL" },
+        "hide": 2
+      },
+      {
+        "name": "DS_TEMPO",
+        "type": "datasource",
+        "query": "tempo",
+        "current": { "text": "Tempo", "value": "Tempo" },
+        "hide": 2
+      },
+      {
+        "name": "pipeline",
+        "type": "query",
+        "datasource": { "type": "postgres", "uid": "${DS_POSTGRESQL}" },
+        "query": "SELECT DISTINCT pipeline_name FROM pipeline_runs ORDER BY pipeline_name",
+        "refresh": 2,
+        "sort": 1,
+        "label": "Pipeline",
+        "includeAll": false
+      },
+      {
+        "name": "run_no",
+        "type": "query",
+        "datasource": { "type": "postgres", "uid": "${DS_POSTGRESQL}" },
+        "query": "SELECT DISTINCT run_no FROM pipeline_runs WHERE pipeline_name = '$pipeline' ORDER BY run_no DESC",
+        "refresh": 2,
+        "sort": 0,
+        "label": "Run Number",
+        "includeAll": false
+      },
+      {
+        "name": "traceId",
+        "type": "query",
+        "datasource": { "type": "postgres", "uid": "${DS_POSTGRESQL}" },
+        "query": "SELECT trace_id FROM pipeline_runs WHERE pipeline_name = '$pipeline' AND run_no = CAST('$run_no' AS INTEGER) AND trace_id IS NOT NULL LIMIT 1",
+        "refresh": 2,
+        "sort": 0,
+        "label": "Trace ID",
+        "hide": 0
+      }
+    ]
+  },
+  "schemaVersion": 39,
+  "version": 1
+}

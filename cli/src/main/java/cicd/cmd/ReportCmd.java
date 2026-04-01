@@ -129,6 +129,7 @@ public class ReportCmd implements Callable<Integer> {
     for (JsonNode rn : runs) {
       System.out.println("  - run-no: " + rn.path("run-no").asInt());
       System.out.println("    status: " + text(rn, "status"));
+      System.out.println("    trace-id: " + text(rn, "trace-id"));
       System.out.println("    git-branch: " + text(rn, "git-branch"));
       System.out.println("    git-hash: " + text(rn, "git-hash"));
       System.out.println("    start: " + text(rn, "start"));
@@ -141,6 +142,7 @@ public class ReportCmd implements Callable<Integer> {
     System.out.println("pipeline: " + text(json, "pipelineName"));
     System.out.println("run-no: " + json.path("run-no").asInt());
     System.out.println("status: " + text(json, "status"));
+    System.out.println("trace-id: " + text(json, "trace-id"));
     System.out.println("git-repo: " + text(json, "git-repo"));
     System.out.println("git-branch: " + text(json, "git-branch"));
     System.out.println("git-hash: " + text(json, "git-hash"));

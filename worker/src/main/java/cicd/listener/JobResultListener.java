@@ -3,6 +3,9 @@ package cicd.listener;
 import cicd.config.RabbitMqConfig;
 import cicd.messaging.JobResultMessage;
 import cicd.service.StageCoordinatorService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
@@ -12,6 +15,9 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class JobResultListener {
+
+  private static final Logger log =
+      LoggerFactory.getLogger(JobResultListener.class);
 
   private final StageCoordinatorService coordinator;
 
@@ -23,9 +29,14 @@ public class JobResultListener {
   /** Forwards a job result to the stage coordinator. */
   @RabbitListener(queues = RabbitMqConfig.JOB_RESULTS_QUEUE)
   public void onJobResult(JobResultMessage result) {
-    System.out.println("  < Result received: job='" + result.getJobName()
-        + "' success=" + result.isSuccess()
-        + " correlationId=" + result.getCorrelationId());
-    coordinator.recordResult(result.getCorrelationId(), result);
+    MDC.put("source", "system");
+    try {
+      log.info("Result received: job='{}' success={} correlationId={}",
+          result.getJobName(), result.isSuccess(),
+          result.getCorrelationId());
+      coordinator.recordResult(result.getCorrelationId(), result);
+    } finally {
+      MDC.remove("source");
+    }
   }
 }

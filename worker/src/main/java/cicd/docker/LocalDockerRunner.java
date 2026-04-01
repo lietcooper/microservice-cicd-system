@@ -16,12 +16,19 @@ import com.github.dockerjava.transport.DockerHttpClient;
 import com.github.dockerjava.zerodep.ZerodepDockerHttpClient;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 /**
  * Runs pipeline jobs inside local Docker containers.
  */
 public class LocalDockerRunner implements DockerRunner {
+
+  private static final Logger log =
+      LoggerFactory.getLogger(LocalDockerRunner.class);
 
   private static final long PULL_TIMEOUT_SECS = 300;
   private static final long EXEC_TIMEOUT_SECS = 600;
@@ -63,14 +70,22 @@ public class LocalDockerRunner implements DockerRunner {
       containerId = createContainer(image, shellCommand, repoPath);
       dockerClient.startContainerCmd(containerId).exec();
 
+      // Stream container logs in real-time via SLF4J
+      StringBuilder output = new StringBuilder();
+      ResultCallback.Adapter<Frame> logCallback =
+          startLogStreaming(containerId, output);
+
       int exitCode = awaitCompletion(containerId);
+
+      // Wait for log stream to finish after container exits
+      logCallback.awaitCompletion(LOG_TIMEOUT_SECS, TimeUnit.SECONDS);
+
       if (exitCode < 0) {
         return new JobResult(image, 1,
             "job timed out after " + EXEC_TIMEOUT_SECS + " seconds");
       }
 
-      String logs = captureLogs(containerId);
-      return new JobResult(image, exitCode, logs);
+      return new JobResult(image, exitCode, output.toString());
     } catch (NotFoundException ex) {
       return new JobResult(image, 1, "image not found: " + image);
     } catch (InterruptedException ex) {
@@ -123,29 +138,45 @@ public class LocalDockerRunner implements DockerRunner {
     return callback.awaitStatusCode();
   }
 
-  private String captureLogs(String containerId)
-      throws InterruptedException {
-    StringBuilder output = new StringBuilder();
+  /**
+   * Starts streaming container logs in real-time via SLF4J.
+   * Each log line is emitted with MDC source=job-container.
+   * Output is also captured into the StringBuilder for JobResult.
+   *
+   * @param containerId the Docker container to stream logs from
+   * @param output      buffer to accumulate full output
+   * @return the callback adapter (caller must awaitCompletion)
+   */
+  private ResultCallback.Adapter<Frame> startLogStreaming(
+      String containerId, StringBuilder output) {
+    Map<String, String> callerMdc = MDC.getCopyOfContextMap();
     ResultCallback.Adapter<Frame> callback =
         new ResultCallback.Adapter<>() {
           @Override
           public void onNext(Frame frame) {
-            output.append(new String(frame.getPayload(),
-                StandardCharsets.UTF_8));
+            String text = new String(frame.getPayload(),
+                StandardCharsets.UTF_8);
+            output.append(text);
+
+            // Restore caller MDC context on the I/O thread
+            if (callerMdc != null) {
+              MDC.setContextMap(callerMdc);
+            }
+            MDC.put("source", "job-container");
+            for (String line : text.stripTrailing().split("\n")) {
+              if (!line.isEmpty()) {
+                log.info("{}", line);
+              }
+            }
+            MDC.clear();
           }
         };
     dockerClient.logContainerCmd(containerId)
         .withStdOut(true)
         .withStdErr(true)
-        .withFollowStream(false)
+        .withFollowStream(true)
         .exec(callback);
-    boolean done = callback.awaitCompletion(
-        LOG_TIMEOUT_SECS, TimeUnit.SECONDS);
-    if (!done) {
-      output.append("\n[WARNING] log capture timed out after "
-          + LOG_TIMEOUT_SECS + " seconds, output may be incomplete");
-    }
-    return output.toString();
+    return callback;
   }
 
   private void killContainer(String containerId) {

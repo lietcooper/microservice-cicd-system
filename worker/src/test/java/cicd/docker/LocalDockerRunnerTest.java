@@ -90,7 +90,7 @@ class LocalDockerRunnerTest {
         .thenReturn(logCmd);
     when(logCmd.withStdOut(true)).thenReturn(logCmd);
     when(logCmd.withStdErr(true)).thenReturn(logCmd);
-    when(logCmd.withFollowStream(false)).thenReturn(logCmd);
+    when(logCmd.withFollowStream(true)).thenReturn(logCmd);
     doAnswer(inv -> {
       ResultCallback<Frame> cb = inv.getArgument(0);
       cb.onComplete();
