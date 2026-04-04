@@ -50,7 +50,7 @@ spec:
     - metadata:
         name: rmqdata
       spec:
-        storageClassName: gp2
+        storageClassName: {{ .Values.rabbitmq.storageClass | default "standard" }}
         accessModes: ["ReadWriteOnce"]
         resources:
           requests:
