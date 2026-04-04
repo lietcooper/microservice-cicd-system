@@ -6,6 +6,8 @@ import cicd.executor.JobResult;
 import cicd.messaging.JobExecuteMessage;
 import cicd.messaging.JobResultMessage;
 import cicd.observability.TraceContextHelper;
+import cicd.service.ArtifactCollectorService;
+import cicd.service.ArtifactStorageService;
 import cicd.service.StatusEventPublisher;
 import cicd.service.StatusUpdatePublisher;
 import io.opentelemetry.api.common.AttributeKey;
@@ -14,6 +16,9 @@ import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
+import java.nio.file.Path;
+import java.util.Collections;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -37,6 +42,8 @@ public class JobExecutionListener {
   private final RabbitTemplate rabbitTemplate;
   private final StatusEventPublisher eventPublisher;
   private final StatusUpdatePublisher statusPublisher;
+  private final ArtifactCollectorService artifactCollector;
+  private final ArtifactStorageService artifactStorage;
   private final Tracer tracer;
 
   /** Creates a listener with the given dependencies. */
@@ -44,19 +51,26 @@ public class JobExecutionListener {
   public JobExecutionListener(RabbitTemplate rabbitTemplate,
       StatusEventPublisher eventPublisher,
       StatusUpdatePublisher statusPublisher,
+      ArtifactCollectorService artifactCollector,
+      ArtifactStorageService artifactStorage,
       Tracer tracer) {
     this.dockerRunner = new LocalDockerRunner();
     this.rabbitTemplate = rabbitTemplate;
     this.eventPublisher = eventPublisher;
     this.statusPublisher = statusPublisher;
+    this.artifactCollector = artifactCollector;
+    this.artifactStorage = artifactStorage;
     this.tracer = tracer;
   }
 
   /** Backward-compatible constructor for tests (no-op tracer). */
   public JobExecutionListener(RabbitTemplate rabbitTemplate,
       StatusEventPublisher eventPublisher,
-      StatusUpdatePublisher statusPublisher) {
+      StatusUpdatePublisher statusPublisher,
+      ArtifactCollectorService artifactCollector,
+      ArtifactStorageService artifactStorage) {
     this(rabbitTemplate, eventPublisher, statusPublisher,
+        artifactCollector, artifactStorage,
         io.opentelemetry.api.OpenTelemetry.noop().getTracer("test"));
   }
 
@@ -99,10 +113,23 @@ public class JobExecutionListener {
       JobResult result = dockerRunner.runJob(
           msg.getImage(), msg.getScripts(), msg.getWorkspacePath());
 
-      // Update job status via MQ
+      // Collect and store artifacts on success
+      List<String> storedArtifacts = Collections.emptyList();
+      if (result.ok() && msg.getArtifacts() != null
+          && !msg.getArtifacts().isEmpty()) {
+        List<String> matched = artifactCollector.collect(
+            msg.getArtifacts(), Path.of(msg.getWorkspacePath()));
+        storedArtifacts = artifactStorage.store(matched,
+            Path.of(msg.getWorkspacePath()),
+            msg.getPipelineName(), msg.getRunNo(),
+            msg.getStageName(), msg.getJobName());
+      }
+
+      // Update job status via MQ (with artifact info if any)
       statusPublisher.jobCompleted(msg.getPipelineRunId(),
           msg.getPipelineName(), msg.getRunNo(),
-          msg.getStageName(), msg.getJobName(), result.ok());
+          msg.getStageName(), msg.getJobName(), result.ok(),
+          msg.getArtifacts(), storedArtifacts);
 
       eventPublisher.publishJobCompleted(msg.getPipelineRunId(),
           msg.getPipelineName(), msg.getRunNo(),
@@ -119,6 +146,7 @@ public class JobExecutionListener {
       resultMsg.setExitCode(result.exitCode());
       resultMsg.setOutput(result.output());
       resultMsg.setAllowFailure(msg.isAllowFailure());
+      resultMsg.setCollectedArtifacts(storedArtifacts);
 
       rabbitTemplate.convertAndSend(
           RabbitMqConfig.JOB_RESULTS_EXCHANGE,

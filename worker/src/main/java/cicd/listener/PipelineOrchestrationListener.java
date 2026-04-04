@@ -201,6 +201,7 @@ public class PipelineOrchestrationListener {
               jobMsg.setTotalJobsInWave(runnableJobs.size());
               jobMsg.setRunNo(msg.getRunNo());
               jobMsg.setAllowFailure(job.allowFailure);
+              jobMsg.setArtifacts(job.artifacts);
 
               // Stage span is current — RabbitTemplate auto-injects context
               rabbitTemplate.convertAndSend(

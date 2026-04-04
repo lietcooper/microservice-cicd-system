@@ -11,6 +11,8 @@ import static org.mockito.Mockito.verify;
 import cicd.config.RabbitMqConfig;
 import cicd.messaging.JobExecuteMessage;
 import cicd.messaging.JobResultMessage;
+import cicd.service.ArtifactCollectorService;
+import cicd.service.ArtifactStorageService;
 import cicd.service.StatusEventPublisher;
 import cicd.service.StatusUpdatePublisher;
 import java.util.List;
@@ -35,6 +37,8 @@ class JobExecutionListenerTest {
   private RabbitTemplate rabbitTemplate;
   private StatusEventPublisher eventPublisher;
   private StatusUpdatePublisher statusPublisher;
+  private ArtifactCollectorService artifactCollector;
+  private ArtifactStorageService artifactStorage;
   private JobExecutionListener listener;
 
   @BeforeEach
@@ -42,8 +46,11 @@ class JobExecutionListenerTest {
     rabbitTemplate = mock(RabbitTemplate.class);
     eventPublisher = mock(StatusEventPublisher.class);
     statusPublisher = mock(StatusUpdatePublisher.class);
+    artifactCollector = mock(ArtifactCollectorService.class);
+    artifactStorage = mock(ArtifactStorageService.class);
     listener = new JobExecutionListener(
-        rabbitTemplate, eventPublisher, statusPublisher);
+        rabbitTemplate, eventPublisher, statusPublisher,
+        artifactCollector, artifactStorage);
   }
 
   @Test
@@ -75,7 +82,8 @@ class JobExecutionListenerTest {
 
     // Docker fails in test env, so success=false is expected
     verify(statusPublisher).jobCompleted(
-        eq(1L), eq("default"), eq(1), eq("build"), eq("compile"), anyBoolean());
+        eq(1L), eq("default"), eq(1), eq("build"), eq("compile"),
+        anyBoolean(), any(), any());
   }
 
   @Test

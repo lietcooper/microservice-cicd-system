@@ -4,6 +4,7 @@ import cicd.config.RabbitMqConfig;
 import cicd.messaging.StatusUpdateMessage;
 import io.opentelemetry.api.trace.Span;
 import java.time.OffsetDateTime;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -120,11 +121,23 @@ public class StatusUpdatePublisher {
   public void jobCompleted(Long pipelineRunId,
       String pipelineName, int runNo, String stageName,
       String jobName, boolean success) {
+    jobCompleted(pipelineRunId, pipelineName, runNo,
+        stageName, jobName, success, null, null);
+  }
+
+  /** Publishes a job-completed status update with artifact info. */
+  public void jobCompleted(Long pipelineRunId,
+      String pipelineName, int runNo, String stageName,
+      String jobName, boolean success,
+      List<String> artifactPatterns,
+      List<String> artifactStoragePaths) {
     StatusUpdateMessage msg = buildJob(
         pipelineRunId, pipelineName, runNo,
         stageName, jobName);
     msg.setStatus(success ? "SUCCESS" : "FAILED");
     msg.setEndTime(OffsetDateTime.now());
+    msg.setArtifactPatterns(artifactPatterns);
+    msg.setArtifactStoragePaths(artifactStoragePaths);
     publish(msg);
   }
 

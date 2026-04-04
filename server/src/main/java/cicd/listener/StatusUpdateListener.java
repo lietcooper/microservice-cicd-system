@@ -3,14 +3,17 @@ package cicd.listener;
 import cicd.config.RabbitMqConfig;
 import cicd.messaging.StatusUpdateMessage;
 import cicd.observability.CicdMetrics;
+import cicd.persistence.entity.ArtifactEntity;
 import cicd.persistence.entity.JobRunEntity;
 import cicd.persistence.entity.PipelineRunEntity;
 import cicd.persistence.entity.RunStatus;
 import cicd.persistence.entity.StageRunEntity;
+import cicd.persistence.repository.ArtifactRepository;
 import cicd.persistence.repository.JobRunRepository;
 import cicd.persistence.repository.PipelineRunRepository;
 import cicd.persistence.repository.StageRunRepository;
 import java.time.Duration;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -30,15 +33,18 @@ public class StatusUpdateListener {
   private final PipelineRunRepository pipelineRunRepo;
   private final StageRunRepository stageRunRepo;
   private final JobRunRepository jobRunRepo;
+  private final ArtifactRepository artifactRepo;
   private final CicdMetrics metrics;
 
   /** Creates a listener with the required repositories and optional metrics. */
   public StatusUpdateListener(PipelineRunRepository pipelineRunRepo,
       StageRunRepository stageRunRepo, JobRunRepository jobRunRepo,
+      ArtifactRepository artifactRepo,
       ObjectProvider<CicdMetrics> metricsProvider) {
     this.pipelineRunRepo = pipelineRunRepo;
     this.stageRunRepo = stageRunRepo;
     this.jobRunRepo = jobRunRepo;
+    this.artifactRepo = artifactRepo;
     this.metrics = metricsProvider.getIfAvailable();
   }
 
@@ -162,6 +168,10 @@ public class StatusUpdateListener {
     jobRunRepo.save(jobRun);
     jobRunRepo.flush();
 
+    // Persist artifact records if present
+    persistArtifacts(jobRun, msg.getArtifactPatterns(),
+        msg.getArtifactStoragePaths());
+
     if (metrics != null && isTerminal(msg.getStatus())
         && jobRun.getStartTime() != null
         && jobRun.getEndTime() != null) {
@@ -170,6 +180,24 @@ public class StatusUpdateListener {
       metrics.recordJobCompleted(msg.getPipelineName(), msg.getStageName(),
           msg.getJobName(), msg.getStatus(), durationMs);
     }
+  }
+
+  private void persistArtifacts(JobRunEntity jobRun,
+      List<String> patterns, List<String> storagePaths) {
+    if (patterns == null || storagePaths == null
+        || storagePaths.isEmpty()) {
+      return;
+    }
+    for (int i = 0; i < storagePaths.size(); i++) {
+      ArtifactEntity artifact = new ArtifactEntity();
+      artifact.setJobRun(jobRun);
+      artifact.setPattern(i < patterns.size() ? patterns.get(i) : "");
+      artifact.setStoragePath(storagePaths.get(i));
+      artifactRepo.save(artifact);
+    }
+    artifactRepo.flush();
+    log.debug("Persisted {} artifact(s) for job '{}'",
+        storagePaths.size(), jobRun.getJobName());
   }
 
   private boolean isTerminal(String status) {

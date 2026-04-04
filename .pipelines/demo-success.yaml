@@ -1,0 +1,27 @@
+pipeline:
+  name: demo-success
+  description: Demo pipeline that succeeds
+
+stages:
+  - build
+  - test
+
+hello:
+  - stage: build
+  - image: alpine:latest
+  - script:
+    - mkdir -p build/reports
+    - echo "Build complete!" > build/output.txt
+    - echo "<html>report</html>" > build/reports/summary.html
+  - artifacts:
+    - build/output.txt
+    - build/reports/*.html
+
+check:
+  - stage: test
+  - image: alpine:latest
+  - script:
+    - mkdir -p results
+    - echo "All tests passed!" > results/test-result.txt
+  - artifacts:
+    - results/

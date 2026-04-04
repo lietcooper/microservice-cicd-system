@@ -170,6 +170,14 @@ public class ReportCmd implements Callable<Integer> {
           System.out.println("        status: " + text(jb, "status"));
           System.out.println("        start: " + text(jb, "start"));
           System.out.println("        end: " + text(jb, "end"));
+          JsonNode arts = jb.path("artifacts");
+          if (!arts.isMissingNode() && arts.isArray() && arts.size() > 0) {
+            System.out.println("        artifacts:");
+            for (JsonNode art : arts) {
+              System.out.println("          - " + text(art, "pattern")
+                  + " -> " + text(art, "location"));
+            }
+          }
         }
       }
     }

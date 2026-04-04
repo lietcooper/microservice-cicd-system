@@ -11,6 +11,7 @@ public class Job {
   public String image;
   public List<String> script = new ArrayList<>();
   public List<String> needs = new ArrayList<>();
+  public List<String> artifacts = new ArrayList<>();
   public boolean needsExplicitlyDefined = false;
   public boolean allowFailure = false;
 
