@@ -51,7 +51,7 @@ spec:
     - metadata:
         name: pgdata
       spec:
-        storageClassName: gp2
+        storageClassName: {{ .Values.postgresql.storageClass | default "standard" }}
         accessModes: ["ReadWriteOnce"]
         resources:
           requests:

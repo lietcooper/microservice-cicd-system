@@ -67,7 +67,7 @@ spec:
     - metadata:
         name: data
       spec:
-        storageClassName: gp2
+        storageClassName: {{ .Values.loki.storageClass | default "standard" }}
         accessModes: ["ReadWriteOnce"]
         resources:
           requests:

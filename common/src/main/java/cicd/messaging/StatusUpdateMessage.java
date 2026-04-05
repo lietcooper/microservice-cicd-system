@@ -3,6 +3,7 @@ package cicd.messaging;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.OffsetDateTime;
+import java.util.List;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -46,5 +47,11 @@ public class StatusUpdateMessage {
 
   /** Trace ID for pipeline-level updates; null for stage/job updates. */
   private String traceId;
+
+  /** Artifact patterns from the YAML config (for job-level updates). */
+  private List<String> artifactPatterns;
+
+  /** Storage paths of collected artifacts (for job completion updates). */
+  private List<String> artifactStoragePaths;
 
 }

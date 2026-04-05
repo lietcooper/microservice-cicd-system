@@ -77,7 +77,7 @@ spec:
     - metadata:
         name: data
       spec:
-        storageClassName: gp2
+        storageClassName: {{ .Values.prometheus.storageClass | default "standard" }}
         accessModes: ["ReadWriteOnce"]
         resources:
           requests:

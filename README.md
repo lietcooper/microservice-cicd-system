@@ -143,6 +143,28 @@ The local example repository sources are:
 - `demo-repos/success-repo`
 - `demo-repos/fail-repo`
 
+## Kubernetes Deployment
+
+All system components can be deployed to Kubernetes via the Helm chart in `helm/cicd/`. See [K8S-SETUP.md](K8S-SETUP.md) for the full deployment guide.
+
+### Component K8s-Enablement
+
+| Component | K8s Enabled | Requirement | Notes |
+|-----------|:-----------:|:-----------:|-------|
+| Server | Yes | **Required** | Stateless REST API |
+| Worker | Yes | **Required** | Stateless job executor + Docker-in-Docker |
+| PostgreSQL | Yes | Optional | Stateful; can use external instance (`postgresql.enabled: false`) |
+| RabbitMQ | Yes | Optional | Stateful; can use external instance (`rabbitmq.enabled: false`) |
+| Observability stack | Yes | Optional | OTel Collector, Prometheus, Loki, Tempo, Grafana |
+| CLI | No | N/A | Runs on developer machine, connects to server via HTTP |
+
+Quick deploy:
+
+```bash
+helm install cicd ./helm/cicd -n cicd --create-namespace
+kubectl port-forward svc/cicd-cicd-server 8080:8080 -n cicd
+```
+
 ## Observability
 
 The system includes a full observability stack deployed alongside the application via Helm.

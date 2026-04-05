@@ -1,6 +1,7 @@
 package cicd.messaging;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import java.util.List;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -22,5 +23,6 @@ public class JobResultMessage {
   private int exitCode;
   private String output;
   private boolean allowFailure;
+  private List<String> collectedArtifacts;
 
 }

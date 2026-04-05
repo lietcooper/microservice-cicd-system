@@ -203,6 +203,8 @@ public class YamlParser {
       jj.needsCol = val.getStartMark().getColumn() + 1;
     } else if ("failures".equals(key)) {
       parseBooleanField(jj, val);
+    } else if ("artifacts".equals(key)) {
+      jj.artifacts = strList(val, "artifacts");
     }
   }
 

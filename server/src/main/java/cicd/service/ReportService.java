@@ -1,5 +1,6 @@
 package cicd.service;
 
+import cicd.api.dto.ArtifactDto;
 import cicd.api.dto.JobDto;
 import cicd.api.dto.PipelineRunDetailResponse;
 import cicd.api.dto.PipelineRunsResponse;
@@ -215,6 +216,19 @@ public class ReportService {
     dto.setStartTime(entity.getStartTime());
     dto.setEndTime(entity.getEndTime());
     dto.setFailures(entity.isAllowFailure());
+
+    if (entity.getArtifacts() != null
+        && !entity.getArtifacts().isEmpty()) {
+      dto.setArtifacts(entity.getArtifacts().stream()
+          .map(a -> {
+            ArtifactDto ad = new ArtifactDto();
+            ad.setPattern(a.getPattern());
+            ad.setLocation(a.getStoragePath());
+            return ad;
+          })
+          .collect(Collectors.toList()));
+    }
+
     return dto;
   }
 }

@@ -1,0 +1,11 @@
+pipeline:
+  name: demo-fail
+  description: Demo pipeline that fails
+
+stages:
+  - build
+
+fail-job:
+  - stage: build
+  - image: alpine:latest
+  - script: 'echo "Starting build..." && exit 1'

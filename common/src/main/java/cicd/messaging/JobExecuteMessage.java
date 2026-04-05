@@ -25,5 +25,6 @@ public class JobExecuteMessage {
   private String workspacePath;
   private int totalJobsInWave;
   private boolean allowFailure;
+  private List<String> artifacts;
 
 }

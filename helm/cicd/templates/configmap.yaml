@@ -14,6 +14,11 @@ data:
   SPRING_DATASOURCE_URL: {{ include "cicd.postgresql.url" . | quote }}
   SPRING_DATASOURCE_USERNAME: {{ include "cicd.postgresql.username" . | quote }}
 
+  # ---- MinIO (worker only) ----
+  CICD_MINIO_ENDPOINT: {{ include "cicd.minio.endpoint" . | quote }}
+  CICD_MINIO_ACCESS_KEY: {{ include "cicd.minio.accessKey" . | quote }}
+  CICD_MINIO_BUCKET: {{ .Values.minio.bucket | quote }}
+
   # ---- OpenTelemetry ----
   OTEL_EXPORTER_OTLP_ENDPOINT: "http://{{ include "cicd.fullname" . }}-otel-collector:4317"
   OTEL_METRICS_EXPORTER: none
