@@ -38,6 +38,11 @@ spec:
               value: "http://{{ include "cicd.fullname" . }}-otel-collector:4317"
             - name: OTEL_SERVICE_NAME
               value: cicd-worker
+            - name: CICD_MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "cicd.fullname" . }}-secret
+                  key: CICD_MINIO_SECRET_KEY
             - name: DOCKER_HOST
               value: tcp://localhost:2375
           livenessProbe:

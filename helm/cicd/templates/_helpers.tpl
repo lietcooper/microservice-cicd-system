@@ -77,6 +77,33 @@ Compute the RabbitMQ host / port / credentials
 {{- end -}}
 {{- end }}
 
+{{/*
+Compute MinIO endpoint / credentials
+*/}}
+{{- define "cicd.minio.endpoint" -}}
+{{- if .Values.minio.enabled -}}
+http://{{ .Release.Name }}-minio:{{ .Values.minio.port }}
+{{- else -}}
+{{ .Values.minio.externalEndpoint }}
+{{- end -}}
+{{- end }}
+
+{{- define "cicd.minio.accessKey" -}}
+{{- if .Values.minio.enabled -}}
+{{ .Values.minio.accessKey }}
+{{- else -}}
+{{ .Values.minio.externalAccessKey }}
+{{- end -}}
+{{- end }}
+
+{{- define "cicd.minio.secretKey" -}}
+{{- if .Values.minio.enabled -}}
+{{ .Values.minio.secretKey }}
+{{- else -}}
+{{ .Values.minio.externalSecretKey }}
+{{- end -}}
+{{- end }}
+
 {{- define "cicd.rabbitmq.password" -}}
 {{- if .Values.rabbitmq.enabled -}}
 {{ .Values.rabbitmq.password }}

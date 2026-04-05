@@ -61,6 +61,26 @@ rabbitmq:
   externalPassword: ""
 
 # =============================================================
+# MinIO  (S3-compatible artifact storage)
+# Set enabled: false to use an external S3/MinIO instance.
+# =============================================================
+minio:
+  enabled: true
+  image:
+    repository: minio/minio
+    tag: RELEASE.2024-06-13T22-53-53Z
+  accessKey: minioadmin
+  secretKey: minioadmin
+  bucket: cicd-artifacts
+  storage: 5Gi
+  port: 9000
+  consolePort: 9001
+  # Used only when enabled: false
+  externalEndpoint: ""   # e.g. http://my-minio.example.com:9000
+  externalAccessKey: ""
+  externalSecretKey: ""
+
+# =============================================================
 # OpenTelemetry Collector
 # Single Deployment that receives OTLP from server/worker and
 # fans out to Prometheus (metrics), Loki (logs), Tempo (traces).
