@@ -152,43 +152,18 @@ run \
 "cicd report --pipeline demo-fail --run $FAIL_RUN --stage build --server $SERVER"
 
 # ---------------------------------------------------------------
-header "Part 5: Pattern Matching Examples"
-# ---------------------------------------------------------------
-
-echo ""
-echo "  Supported patterns:"
-echo "    README.md              exact file"
-echo "    build/                 directory (recursive)"
-echo "    *.java                 suffix wildcard"
-echo "    READ*                  prefix wildcard"
-echo "    build/*/doc/           single-level wildcard dir"
-echo "    build/**/distribution  any-depth wildcard dir"
-echo ""
-echo "  Demo pipeline uses:"
-echo "    build/output.txt       exact file"
-echo "    build/reports/*.html   suffix wildcard in subdir"
-echo "    results/               directory (recursive)"
-read -s -p ""
-
-# ---------------------------------------------------------------
-header "Part 6: Storage & Implementation"
+header "Part 5: Storage Backend"
 # ---------------------------------------------------------------
 
 run \
 "kubectl get pods -n cicd | grep minio" \
 "kubectl get pods -n cicd | grep minio"
 
-echo ""
-echo "  Artifact storage path convention:"
-echo "    {pipeline}/{run}/{stage}/{job}/{relative-path}"
-echo ""
-echo "  Flow:"
-echo "    1. YAML defines artifact patterns per job"
-echo "    2. After job succeeds, ArtifactCollectorService matches files"
-echo "    3. ArtifactStorageService uploads to MinIO (S3-compatible)"
-echo "    4. Metadata persisted to PostgreSQL (artifacts table)"
-echo "    5. Report API returns pattern + storage location"
-read -s -p ""
+run \
+"kubectl exec -n cicd cicd-postgresql-0 -- \\
+  psql -U cicd -d cicd -c \\
+  'SELECT id, job_run_id, pattern, storage_path FROM artifacts ORDER BY id DESC LIMIT 10;'" \
+"kubectl exec -n cicd cicd-postgresql-0 -- psql -U cicd -d cicd -c 'SELECT id, job_run_id, pattern, storage_path FROM artifacts ORDER BY id DESC LIMIT 10;'"
 
 # ---------------------------------------------------------------
 echo ""
