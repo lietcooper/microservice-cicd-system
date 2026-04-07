@@ -6,115 +6,121 @@
 
 ---
 
+## Intro (~10s)
+
+**Say:**
+Hi professor, thanks for taking the time to watch our demo. Today we're going to walk you through the artifacts feature we added to our CI/CD system — it lets users specify which build outputs to keep, and the system automatically collects and stores them after a successful job.
+
+---
+
 ## Part 1: Artifact Specification in YAML (~30s)
 
 **Say:**
-We added support for artifact uploads in our CI/CD system. Jobs can specify files, directories, and wildcard patterns to collect after execution.
+So let's start by looking at what artifact configuration looks like from the user's perspective.
 
 **CLI:**
 ```
 cat .pipelines/demo-success.yaml
 ```
-- "This pipeline has two stages. The build job specifies two artifact patterns: an exact file `build/output.txt` and a wildcard `build/reports/*.html`. The test job uploads the entire `results/` directory."
-- "Artifacts are only collected when a job succeeds."
+- "Here's a pipeline with two stages — build and test. If you look at the hello job under build, you'll see the `artifacts` key. It lists two patterns: an exact file `build/output.txt`, and a wildcard `build/reports/*.html` to grab any HTML reports."
+- "And down in the test stage, the check job uses `results/` with a trailing slash, which means it'll upload that entire directory recursively."
+- "One important thing — artifacts only get collected when a job actually succeeds."
 
 ---
 
 ## Part 2: Run Pipeline with Artifacts (~1min)
 
+**Say:**
+Alright, let's actually run this and see it in action.
+
 **CLI:**
 ```
 cicd run --file .pipelines/demo-success.yaml --repo-url $REPO --server $SERVER
 ```
-- "We trigger the pipeline. The worker will execute each job in Docker, then collect and upload any matching artifacts to MinIO."
+- "We're triggering the pipeline now. Behind the scenes, the worker picks up each job, runs it in a Docker container, and once it finishes successfully, it scans the workspace for files matching those artifact patterns and uploads them to MinIO."
 
 ```
 cicd status ...
 ```
-- "Both stages passed — artifacts should have been collected."
+- "Great, both stages passed — so our artifacts should have been collected."
 
 ---
 
 ## Part 3: Artifacts in Report (~1.5min)
 
 **Say:**
-The report command now shows artifacts for each job — the original pattern and the storage location in MinIO.
+Now let's check the report to see if the artifacts actually show up.
 
 **CLI:**
 ```
 cicd report --pipeline demo-success --run N --stage build --server $SERVER
 ```
-- "The hello job has two artifacts:"
-  - "`build/output.txt` — exact match, stored at `demo-success/N/build/hello/build/output.txt`"
-  - "`build/reports/*.html` — wildcard matched `summary.html`"
-- "The storage path follows the convention: `pipeline/run/stage/job/relative-path`."
+- "Here we go — the hello job has two artifacts listed. You can see the original pattern on the left and the storage location on the right."
+- "So `build/output.txt` was an exact match, and it's stored at `demo-success/N/build/hello/build/output.txt` in MinIO."
+- "And `build/reports/*.html` matched `summary.html` — the wildcard expanded to the actual file."
+- "The storage path follows a consistent convention: pipeline name, run number, stage, job, then the relative path."
 
 ```
 cicd report --pipeline demo-success --run N --stage test --server $SERVER
 ```
-- "The check job collected `results/` — the directory pattern recursively uploaded all files inside."
+- "And here's the test stage — the check job used that `results/` directory pattern, and it picked up `test-result.txt` from inside it."
 
 ---
 
 ## Part 4: Failed Pipeline — No Artifacts (~1min)
 
 **Say:**
-Artifacts are only uploaded when a job succeeds. Let's verify with a failing pipeline.
+Now let's make sure the other side works too — when a job fails, we should not see any artifacts.
 
 **CLI:**
 ```
 cicd run --file .pipelines/demo-fail.yaml ...
 ```
-- "This pipeline has a job that exits with code 1."
+- "This pipeline has a job that deliberately exits with code 1."
 
 ```
 cicd status ...
 ```
-- "Status: FAILED."
+- "Yep, it failed as expected."
 
 ```
 cicd report --pipeline demo-fail --run N --stage build --server $SERVER
 ```
-- "No artifacts field — the job failed, so nothing was collected. This is the expected behavior per the spec."
+- "And if we look at the report — no artifacts field at all. The job failed, so nothing was collected. That's exactly the behavior the spec calls for."
 
 ---
 
 ## Part 5: Pattern Matching Examples (~30s)
 
 **Say:**
-The system supports the full pattern matching spec from the assignment.
+Let me quickly go over all the pattern types we support, since the spec had pretty specific requirements here.
 
 Walk through the displayed table:
-- "Exact file like `README.md`"
-- "Directory with trailing slash like `build/` — collects everything recursively"
-- "Suffix wildcard: `*.java` matches all Java files"
-- "Prefix wildcard: `READ*` matches README, READLOG, etc."
-- "Single-level directory wildcard: `build/*/doc/` matches `build/java/doc/` but not `build/a/b/doc/`"
-- "Double-star: `build/**/distribution` matches at any depth"
+- "An exact file name like `README.md` — straightforward."
+- "A directory with a trailing slash like `build/` — that grabs everything inside recursively."
+- "Single star for wildcards — `*.java` matches all Java files, `READ*` matches anything starting with READ."
+- "Single star in a path like `build/*/doc/` — matches directories exactly one level deep, so `build/java/doc/` works but `build/a/b/doc/` doesn't."
+- "And double star like `build/**/distribution` — that matches at any depth, so it'll find distribution directories no matter how deeply nested they are."
 
 ---
 
 ## Part 6: Storage & Implementation (~30s)
 
 **Say:**
-Artifacts are stored in MinIO, which is an S3-compatible object storage deployed as a StatefulSet in our Helm chart.
+Finally, let me briefly show you how this is set up on the infrastructure side.
 
 **CLI:**
 ```
 kubectl get pods -n cicd | grep minio
 ```
-- "MinIO runs alongside the other components."
+- "We're using MinIO as the artifact backend — it's S3-compatible and runs right here in the cluster as a StatefulSet with persistent storage."
 
 Walk through the flow:
-1. "YAML defines the patterns"
-2. "ArtifactCollectorService matches files in the workspace using Java glob"
-3. "ArtifactStorageService uploads to MinIO"
-4. "Metadata is persisted to a PostgreSQL `artifacts` table via the status update message"
-5. "The report API returns the pattern and storage location for each artifact"
+- "So the way it all fits together: the YAML defines the patterns, then after a job succeeds, our ArtifactCollectorService scans the workspace using Java's glob matching. Matched files get uploaded to MinIO by the ArtifactStorageService. The metadata — which pattern matched and where it's stored — gets sent back to the server through the status update message and persisted to a PostgreSQL artifacts table. And then the report API just reads that table and returns it."
 
 ---
 
 ## Wrap-up (~5s)
 
 **Say:**
-That's the artifacts feature — YAML pattern specification, automatic collection on success, MinIO storage, and full report integration.
+So that's the artifacts feature — pattern specification in YAML, automatic collection on success, MinIO storage, and it's all wired into the existing report command. Thanks for watching.
