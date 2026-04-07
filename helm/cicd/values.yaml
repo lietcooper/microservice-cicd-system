@@ -3,9 +3,9 @@
 # =============================================================
 server:
   image:
-    repository: yskigpg/cicd-server
+    repository: cicd-server
     tag: latest
-    pullPolicy: Always
+    pullPolicy: IfNotPresent
   replicas: 1
   port: 8080
   service:
@@ -17,9 +17,9 @@ server:
 # =============================================================
 worker:
   image:
-    repository: yskigpg/cicd-worker
+    repository: cicd-worker
     tag: latest
-    pullPolicy: Always
+    pullPolicy: IfNotPresent
   replicas: 1
   port: 8081
   service:
@@ -73,6 +73,7 @@ minio:
   secretKey: minioadmin
   bucket: cicd-artifacts
   storage: 5Gi
+  storageClass: ""           # empty = use cluster default (e.g. "standard" on Minikube)
   port: 9000
   consolePort: 9001
   # Used only when enabled: false

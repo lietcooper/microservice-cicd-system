@@ -58,7 +58,9 @@ spec:
     - metadata:
         name: minio-data
       spec:
-        storageClassName: {{ .Values.minio.storageClass | default "standard" }}
+        {{- if .Values.minio.storageClass }}
+        storageClassName: {{ .Values.minio.storageClass }}
+        {{- end }}
         accessModes: ["ReadWriteOnce"]
         resources:
           requests:
