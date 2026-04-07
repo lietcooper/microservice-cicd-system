@@ -93,7 +93,7 @@ Container stdout and stderr are printed to the worker's console log but are not 
 Artifacts produced by pipeline jobs (test reports, build outputs, etc.) are not collected, stored, or made available after execution.
 
 ### Parallel Job Execution
-Jobs within a stage that have no `needs` dependency on each other are dispatched as a wave and run in parallel via the worker. However, ordering within a wave is non-deterministic and there is no configurable concurrency limit.
+Jobs within a stage that have no `needs` dependency on each other are dispatched as a wave and run in parallel via the worker. The job consumer concurrency is configurable with `cicd.worker.job-concurrency` and defaults to 4. Ordering within a wave remains non-deterministic.
 
 ### Single Worker Instance
 The worker is designed to run as a single instance. Running multiple worker instances simultaneously is untested and may cause race conditions in stage coordination (the `StageCoordinatorService` wave tracker is in-memory and not shared).

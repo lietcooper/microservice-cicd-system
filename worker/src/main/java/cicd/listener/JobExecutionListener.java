@@ -75,7 +75,8 @@ public class JobExecutionListener {
   }
 
   /** Executes a job in Docker and publishes the result. */
-  @RabbitListener(queues = RabbitMqConfig.JOB_EXECUTE_QUEUE)
+  @RabbitListener(queues = RabbitMqConfig.JOB_EXECUTE_QUEUE,
+      concurrency = "${cicd.worker.job-concurrency:4}")
   public void onJobExecute(JobExecuteMessage msg,
       Message amqpMessage) {
     MDC.put("pipeline", msg.getPipelineName());

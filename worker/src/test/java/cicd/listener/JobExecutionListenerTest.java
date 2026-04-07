@@ -1,5 +1,6 @@
 package cicd.listener;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -15,10 +16,12 @@ import cicd.service.ArtifactCollectorService;
 import cicd.service.ArtifactStorageService;
 import cicd.service.StatusEventPublisher;
 import cicd.service.StatusUpdatePublisher;
+import java.lang.reflect.Method;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 
 /**
@@ -144,6 +147,22 @@ class JobExecutionListenerTest {
         eq(RabbitMqConfig.JOB_RESULTS_EXCHANGE),
         eq(RabbitMqConfig.JOB_RESULT_KEY),
         any(JobResultMessage.class));
+  }
+
+  @Test
+  void onJobExecuteUsesConfiguredJobConcurrency()
+      throws NoSuchMethodException {
+    Method method = JobExecutionListener.class.getMethod(
+        "onJobExecute", JobExecuteMessage.class,
+        org.springframework.amqp.core.Message.class);
+
+    RabbitListener listenerAnnotation =
+        method.getAnnotation(RabbitListener.class);
+
+    assertArrayEquals(new String[] {RabbitMqConfig.JOB_EXECUTE_QUEUE},
+        listenerAnnotation.queues());
+    assertEquals("${cicd.worker.job-concurrency:4}",
+        listenerAnnotation.concurrency());
   }
 
   // ── Helper ───────────────────────────────────────────────────────────────────
