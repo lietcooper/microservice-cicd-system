@@ -3,7 +3,7 @@
 # =============================================================
 server:
   image:
-    repository: cicd-server
+    repository: yskigpg/cicd-server
     tag: latest
     pullPolicy: IfNotPresent
   replicas: 1
@@ -17,7 +17,7 @@ server:
 # =============================================================
 worker:
   image:
-    repository: cicd-worker
+    repository: yskigpg/cicd-worker
     tag: latest
     pullPolicy: IfNotPresent
   replicas: 1
