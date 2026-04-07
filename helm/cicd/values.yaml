@@ -5,7 +5,7 @@ server:
   image:
     repository: yskigpg/cicd-server
     tag: latest
-    pullPolicy: IfNotPresent
+    pullPolicy: Always
   replicas: 1
   port: 8080
   service:
@@ -19,7 +19,7 @@ worker:
   image:
     repository: yskigpg/cicd-worker
     tag: latest
-    pullPolicy: IfNotPresent
+    pullPolicy: Always
   replicas: 1
   port: 8081
   service:
