@@ -2,33 +2,102 @@
 
 ## Fully Implemented
 
-1. **YAML Pipeline Parsing & Validation** -- parse pipeline/stages/jobs from YAML with line/column error reporting, cycle detection, dependency validation, type checking
-2. **CLI Commands** -- 5 subcommands: `verify`, `dryrun`, `run`, `report`, `status`
-3. **REST API** -- `POST /api/pipelines/execute`, 4-level report endpoints (`/pipelines/{name}/runs/...`), status endpoints
-4. **Docker Integration** -- job execution in containers, image pulling with timeout, workspace mounting at `/workspace`, real-time log streaming, exit code capture, cleanup
-5. **Database Persistence** -- PostgreSQL via Flyway (4 migrations), entities for pipeline/stage/job runs + artifacts, Spring Data JPA repositories, run-number auto-increment
-6. **RabbitMQ Messaging** -- queue-based choreography with pipeline-execute, job-execute, job-result, status-update, and status-event messages; trace context propagation via W3C headers
-7. **Wave-Based Parallel Execution** -- Kahn's algorithm topological sort, jobs grouped into dependency waves, sequential stages with parallel jobs within waves
-8. **Artifacts Support** -- glob pattern matching (exact, wildcard, `**`), MinIO/S3 upload, DB metadata persistence, report integration at Level 4
-9. **OpenTelemetry Tracing** -- span hierarchy (pipeline->stage->job), trace-id stored in DB, context propagation through RabbitMQ, root span in server, child spans in worker
-10. **Prometheus Metrics** -- 5 metrics: pipeline runs total, pipeline/stage/job duration, job runs total; exposed via `/actuator/prometheus`
-11. **Structured Logging** -- Logback JSON encoder (Logstash format), MDC fields (pipeline, run_no, stage, job, source), SLF4J throughout
-12. **Grafana Dashboards** -- 4 dashboards: Pipeline Overview, Stage & Job Breakdown, Logs Viewer, Trace Explorer; datasource provisioning
-13. **Prometheus Alerting** -- 3 alert rules: consecutive failures (critical), high job duration, high pipeline duration
-14. **Kubernetes & Helm Deployment** -- server, worker (with DinD sidecar), PostgreSQL, RabbitMQ, MinIO, OTel Collector, Prometheus, Loki, Tempo, Grafana; health probes, configurable values
-15. **Git Integration** -- repo cloning/snapshotting, branch/commit selection, hash capture, workspace archiving, pipeline discovery (`.cicd.yaml`)
-16. **Allow-Failure Jobs** -- optional jobs that don't block pipeline on failure, tracked in DB and execution logic
-17. **Test Suite** -- 52 test files across all modules using H2 in-memory DB, MockDockerRunner, covering parsing, validation, execution, services, controllers, messaging, metrics, CLI
+### Core Pipeline Engine
+
+- **Pipeline YAML Parsing & Validation** — Parses pipeline definitions including stages, jobs, images, scripts, dependencies (`needs`), artifacts, and `allow-failure`. Reports errors with line/column positions. Detects dependency cycles and validates stage assignments.
+- **Execution Planner** — Topological sort (Kahn's algorithm) groups jobs into dependency waves. Stages run sequentially; jobs within each wave run in parallel.
+- **Allow-Failure Jobs** — Jobs marked `allow-failure` don't block the pipeline. Tracked through execution and persisted in the database.
+
+### CLI
+
+- `verify` — Validate pipeline YAML syntax and semantics
+- `dryrun` — Preview execution order and wave grouping
+- `run` — Submit a pipeline to the server for execution
+- `report` — Query run history at four levels: pipeline, run, stage, job
+- `status` — Check current pipeline run status by repo or file
+
+### Server & API
+
+- **Pipeline Execution** — `POST /api/pipelines/execute` accepts a pipeline name or inline YAML, clones the repo, and kicks off execution.
+- **Report Endpoints** — Four-level drill-down: all runs for a pipeline, a specific run with stages, a stage with jobs, and individual job details (including artifacts and trace ID).
+- **Status Endpoints** — Query by repository URL or pipeline name.
+
+### Docker
+
+- Jobs run inside Docker containers with the repo mounted at `/workspace`. Handles image pulls (300s timeout), script execution (600s timeout), log streaming, exit code capture, and container cleanup.
+
+### Persistence
+
+- PostgreSQL with Flyway migrations (4 versions). Stores pipeline runs, stage runs, job runs, and artifact metadata. Spring Data JPA with auto-incrementing run numbers and cascade relationships. Status tracked at every phase boundary (start/end of pipeline, stage, job).
+
+### Messaging
+
+- RabbitMQ-based choreography. Message types: pipeline-execute, job-execute, job-result, status-update, status-event. Trace context propagated through W3C headers on AMQP messages.
+
+### Artifacts
+
+- Collects build artifacts using glob patterns (including `**` wildcards). Uploads to MinIO (S3-compatible) with keys like `{pipeline}/{run}/{stage}/{job}/{path}`. Metadata persisted in the artifacts table and surfaced in job-level reports.
+
+### Observability
+
+- **Tracing** — OpenTelemetry spans form a pipeline → stage → job hierarchy. Trace IDs stored in PostgreSQL and included in report responses. Context propagates through RabbitMQ.
+- **Metrics** — Five Prometheus metrics covering pipeline/stage/job durations and run counts, exposed at `/actuator/prometheus`.
+- **Logging** — Structured JSON logs (Logstash encoder) with MDC fields for pipeline, run number, stage, job, and source. Container output streamed through SLF4J.
+- **Dashboards** — Four Grafana dashboards: Pipeline Overview, Stage & Job Breakdown, Logs Viewer, and Trace Explorer. Datasources provisioned automatically.
+- **Alerting** — Three Prometheus alert rules: consecutive pipeline failures (critical), high job duration, and high pipeline duration.
+
+### Kubernetes Deployment
+
+- Helm chart packages the full stack: server, worker (with Docker-in-Docker sidecar), PostgreSQL, RabbitMQ, MinIO, OpenTelemetry Collector, Prometheus, Loki, Tempo, and Grafana. Includes health probes, service definitions, ConfigMaps, and value profiles for Minikube and cloud.
+
+### Git Integration
+
+- Clones repos, checks out branches/commits, captures commit hashes, archives workspaces for distributed execution, and discovers pipeline files (`.cicd.yaml`).
+
+### Testing
+
+- 52 test files across all modules. Uses H2 in-memory database and MockDockerRunner so tests run without external dependencies. Covers parsing, validation, execution planning, services, controllers, messaging, metrics, and CLI commands.
+
+---
 
 ## Partly Implemented
 
-1. **Artifact Download** -- artifacts are collected, stored in MinIO, and metadata is persisted; **missing**: no REST endpoint to download/retrieve artifact files, no content-type serving, CLI shows locations but can't fetch files
-2. **Log Forwarding to Loki** -- JSON logs with MDC fields, OTel Collector config has Loki exporter, Loki deployed via Helm; **missing**: log shipping path (stdout -> OTel -> Loki) not validated end-to-end, no retention policies
-3. **Worker Concurrency Control** -- wave-based grouping exists, job dispatch via RabbitMQ; **missing**: no configurable concurrency limit, no backpressure mechanism
-4. **Report Filtering** -- 4-level hierarchical reports with trace-id; **missing**: no date range filtering, no status filtering across runs, no pagination, no aggregate statistics
-5. **Secrets Management** -- Helm `secret.yaml` template exists, RabbitMQ/MinIO credentials referenced; **missing**: no secret injection into job containers, no vault integration, no env-var secrets for pipelines
-6. **Pipeline Retry / Recovery** -- jobs track failure status, allow-failure flag works; **missing**: no retry mechanism, no configurable retry count/backoff, no resume of failed pipelines
-7. **Git Webhook Integration** -- repo cloning and branch/commit specification work; **missing**: no webhook listener, no auto-trigger on push/PR, manual `run` command required
-8. **Pipeline Templates / Reuse** -- YAML parsing is comprehensive; **missing**: no variable substitution, no pipeline inheritance/composition, no parameterized pipelines
-9. **Build Caching** -- Docker images and workspace mounting functional; **missing**: no layer caching strategy, no artifact caching between runs, no cache invalidation
-10. **Multi-Repository Support** -- server can clone arbitrary repo URLs; **missing**: no multi-repo orchestration in one pipeline, no monorepo path-based triggers
+### Artifact Download
+
+Artifacts are collected, stored in MinIO, and tracked in the database — but there's no REST endpoint to actually download them. The CLI report shows storage locations but can't retrieve the files.
+
+### Log Forwarding to Loki
+
+Structured JSON logs are produced with the right MDC fields, and the OTel Collector config includes a Loki exporter. However, the end-to-end path (stdout → OTel Collector → Loki) hasn't been validated, and there are no retention or cardinality policies in place.
+
+### Worker Concurrency Control
+
+Jobs are grouped into waves and dispatched through RabbitMQ, but there's no configurable concurrency limit per worker and no backpressure mechanism if a worker gets overloaded.
+
+### Report Filtering & Pagination
+
+The four-level report hierarchy works, but there's no way to filter by date range or status across runs, no pagination for large result sets, and no aggregate statistics (success rates, average durations).
+
+### Secrets Management
+
+The Helm chart has a `secret.yaml` template and references credentials for RabbitMQ and MinIO, but pipelines can't inject secrets into job containers. No vault integration or environment-variable secret mechanism exists.
+
+### Pipeline Retry & Recovery
+
+Failed jobs are recorded and `allow-failure` works correctly, but there's no way to retry a failed job or resume a failed pipeline. No retry counts, backoff strategies, or manual intervention points.
+
+### Webhook Triggers
+
+The server can clone any repo and accept branch/commit parameters, but there's no webhook listener. Pipelines must be triggered manually via the `run` command — no auto-trigger on push or PR events.
+
+### Pipeline Templates & Reuse
+
+The YAML parser is solid, but there's no support for template variables, pipeline inheritance, composition, or parameterized pipelines.
+
+### Build Caching
+
+Docker images are pulled and workspaces are mounted, but there's no caching strategy between runs — no layer caching, no artifact caching, and no cache invalidation rules.
+
+### Multi-Repository Support
+
+The server accepts arbitrary repo URLs, but a single pipeline can't orchestrate across multiple repos. No monorepo path-based triggers or cross-repo dependency management.
