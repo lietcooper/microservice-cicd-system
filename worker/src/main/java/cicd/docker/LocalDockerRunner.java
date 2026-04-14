@@ -85,6 +85,11 @@ public class LocalDockerRunner implements DockerRunner {
             "job timed out after " + EXEC_TIMEOUT_SECS + " seconds");
       }
 
+      // Copy workspace back from container to host.
+      // In DinD, bind-mount writes land on the DinD overlay,
+      // not on the shared emptyDir, so we must docker-cp.
+      copyWorkspaceFromContainer(containerId, repoPath);
+
       return new JobResult(image, exitCode, output.toString());
     } catch (NotFoundException ex) {
       return new JobResult(image, 1, "image not found: " + image);
@@ -177,6 +182,38 @@ public class LocalDockerRunner implements DockerRunner {
         .withFollowStream(true)
         .exec(callback);
     return callback;
+  }
+
+  /**
+   * Copies the workspace directory from a stopped container back to the
+   * host path. Needed in DinD where bind-mount writes land on the DinD
+   * overlay filesystem instead of the shared emptyDir volume.
+   */
+  private void copyWorkspaceFromContainer(String containerId,
+      String hostPath) {
+    try (java.io.InputStream tar = dockerClient
+        .copyArchiveFromContainerCmd(containerId, WORKSPACE_DIR + "/.")
+        .exec();
+        org.apache.commons.compress.archivers.tar.TarArchiveInputStream tis =
+            new org.apache.commons.compress.archivers.tar.TarArchiveInputStream(
+                tar)) {
+      org.apache.commons.compress.archivers.tar.TarArchiveEntry entry;
+      java.nio.file.Path dest = java.nio.file.Path.of(hostPath);
+      while ((entry = tis.getNextTarEntry()) != null) {
+        java.nio.file.Path target = dest.resolve(entry.getName());
+        if (entry.isDirectory()) {
+          java.nio.file.Files.createDirectories(target);
+        } else {
+          java.nio.file.Files.createDirectories(target.getParent());
+          java.nio.file.Files.copy(tis, target,
+              java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        }
+      }
+      log.debug("Copied workspace from container to {}", hostPath);
+    } catch (Exception ex) {
+      log.warn("Failed to copy workspace from container: {}",
+          ex.getMessage());
+    }
   }
 
   private void killContainer(String containerId) {

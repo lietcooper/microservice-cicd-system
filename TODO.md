@@ -1,512 +1,158 @@
-# TODO.md — Observability Feature Implementation Checklist
+# TODO.md — Artifacts Sprint: Deploy & Demo Checklist
 
-> Execute tasks in order. Each task is designed to be independently compilable and testable.
-> After completing each section, run `./gradlew clean build -x test` to verify compilation.
+> Previous sprint (observability: Phases 1-12) is fully complete.
+> PR #115 (artifacts feature) is merged to `origin/main` by teammate.
+> Remaining work: merge, Minikube deploy, end-to-end validation, demo preparation.
 
 ---
 
-## Phase 1: Dependencies & Foundation
+## Phase 1: Merge & Build
 
-### 1.1 Add OpenTelemetry + Micrometer dependencies
-- [x] Add OTel BOM and dependencies to `server/build.gradle`:
-  - `io.opentelemetry:opentelemetry-bom:1.40.0` (platform)
-  - `io.opentelemetry:opentelemetry-api`
-  - `io.opentelemetry:opentelemetry-sdk`
-  - `io.opentelemetry:opentelemetry-exporter-otlp`
-  - `io.opentelemetry:opentelemetry-sdk-extension-autoconfigure`
-  - `io.micrometer:micrometer-registry-prometheus`
-  - `org.springframework.boot:spring-boot-starter-actuator`
-  - `net.logstash.logback:logstash-logback-encoder:7.4`
-  - `io.opentelemetry.instrumentation:opentelemetry-logback-appender-1.0:2.6.0-alpha` (for trace-id in logs)
-  - **Files**: `server/build.gradle`
+### 1.1 Get PR #115 changes onto working branch
+- [ ] `git fetch origin`
+- [ ] Merge `origin/main` into current branch: `git merge origin/main`
+- [ ] Resolve any merge conflicts (expect conflicts in files both branches touched: `StatusUpdateListener`, `ReportService`, `worker/build.gradle`, `helm/` templates, etc.)
+- [ ] Verify compilation: `./gradlew clean build -x test`
+- [ ] Run full tests: `./gradlew clean build`
+  - Expected: 320+ tests pass (including new artifact tests from PR #115)
 
-- [x] Add same OTel + logging dependencies to `worker/build.gradle`:
-  - Same OTel BOM + api + sdk + exporter-otlp + autoconfigure
-  - `net.logstash.logback:logstash-logback-encoder:7.4`
-  - `io.opentelemetry.instrumentation:opentelemetry-logback-appender-1.0:2.6.0-alpha`
-  - **Files**: `worker/build.gradle`
+---
 
-- [x] Add SLF4J API to `common/build.gradle` (for structured logging in shared code):
-  - `org.slf4j:slf4j-api:2.0.12`
-  - **Files**: `common/build.gradle`
+## Phase 2: Minikube Setup
 
-- [x] Verify compilation: `./gradlew clean build -x test`
-
-### 1.2 Database migration for trace_id
-- [x] Create `server/src/main/resources/db/migration/V3__add_trace_id_to_pipeline_runs.sql`:
-  ```sql
-  ALTER TABLE pipeline_runs ADD COLUMN trace_id VARCHAR(32);
+### 2.1 Install & start Minikube
+- [ ] Install Minikube if not present: `brew install minikube`
+- [ ] Start cluster with sufficient resources:
+  ```bash
+  minikube start --cpus=4 --memory=8192 --driver=docker
   ```
-  - **Files**: `server/src/main/resources/db/migration/V3__add_trace_id_to_pipeline_runs.sql`
+  - Needs ~8GB RAM for full stack (server, worker, PostgreSQL, RabbitMQ, MinIO, OTel Collector, Prometheus, Loki, Tempo, Grafana)
+- [ ] Verify: `kubectl get nodes` shows Ready
 
-- [x] Add `traceId` field to `PipelineRunEntity.java`:
-  ```java
-  @Column(name = "trace_id", length = 32)
-  private String traceId;
+### 2.2 Build & load Docker images
+- [ ] Build images:
+  ```bash
+  docker build --target server -t cicd-server:latest .
+  docker build --target worker -t cicd-worker:latest .
   ```
-  - **Files**: `server/src/main/java/cicd/persistence/entity/PipelineRunEntity.java`
-
----
-
-## Phase 2: Structured Logging
-
-### 2.1 Configure Logback for structured JSON output
-- [x] Create `server/src/main/resources/logback-spring.xml` with:
-  - Console appender using `LogstashEncoder` (structured JSON)
-  - Include `traceId` and `spanId` fields via OTel Logback appender
-  - Log level configurable via Spring profile
-  - **Files**: `server/src/main/resources/logback-spring.xml`
-
-- [x] Create `worker/src/main/resources/logback-spring.xml` with same structure
-  - **Files**: `worker/src/main/resources/logback-spring.xml`
-
-### 2.2 Convert System.out to SLF4J in modified files
-- [x] Convert `PipelineOrchestrationListener.java` — replace all `System.out.println` / `System.err.println` with `private static final Logger log = LoggerFactory.getLogger(...)` and structured log calls. Use MDC for pipeline/run_no/stage/job context.
-  - **Files**: `worker/src/main/java/cicd/listener/PipelineOrchestrationListener.java`
-
-- [x] Convert `JobExecutionListener.java` — same pattern
-  - **Files**: `worker/src/main/java/cicd/listener/JobExecutionListener.java`
-
-- [x] Convert `JobResultListener.java` — same pattern
-  - **Files**: `worker/src/main/java/cicd/listener/JobResultListener.java`
-
-- [x] Convert `StatusUpdateListener.java` — same pattern
-  - **Files**: `server/src/main/java/cicd/listener/StatusUpdateListener.java`
-
-- [x] Convert `PipelineMessagePublisher.java` — same pattern
-  - **Files**: `server/src/main/java/cicd/messaging/PipelineMessagePublisher.java`
-
-- [x] Convert `StatusUpdatePublisher.java` and `StatusEventPublisher.java` — same pattern
-  - **Files**: `worker/src/main/java/cicd/service/StatusUpdatePublisher.java`, `worker/src/main/java/cicd/service/StatusEventPublisher.java`
-
----
-
-## Phase 3: OpenTelemetry SDK Configuration
-
-### 3.1 Create OTel configuration beans
-- [x] Create `server/src/main/java/cicd/config/OpenTelemetryConfig.java`:
-  - Configure `SdkTracerProvider` with OTLP exporter
-  - Configure `SdkMeterProvider` (for exemplars)
-  - Set service name to `cicd-server`
-  - OTLP endpoint configurable via `OTEL_EXPORTER_OTLP_ENDPOINT` env var (default `http://localhost:4317`)
-  - Export a `Tracer` bean
-  - **Files**: `server/src/main/java/cicd/config/OpenTelemetryConfig.java`
-
-- [x] Create `worker/src/main/java/cicd/config/OpenTelemetryConfig.java`:
-  - Same structure, service name `cicd-worker`
-  - **Files**: `worker/src/main/java/cicd/config/OpenTelemetryConfig.java`
-
-### 3.2 Configure Spring Actuator + Prometheus metrics endpoint
-- [x] Add to `server/src/main/resources/application.properties`:
-  ```properties
-  management.endpoints.web.exposure.include=health,prometheus,info
-  management.metrics.export.prometheus.enabled=true
-  management.endpoint.health.show-details=always
+- [ ] Load into Minikube:
+  ```bash
+  minikube image load cicd-server:latest
+  minikube image load cicd-worker:latest
   ```
-  - **Files**: `server/src/main/resources/application.properties`
+- [ ] Update `helm/cicd/values.yaml` if needed:
+  - `server.image.repository: cicd-server` (local, no registry prefix)
+  - `worker.image.repository: cicd-worker`
+  - `*.image.pullPolicy: IfNotPresent` (for local images, avoid pulling from registry)
 
-- [x] Add to `worker/src/main/resources/application.properties`:
-  ```properties
-  management.endpoints.web.exposure.include=health,prometheus,info
-  management.metrics.export.prometheus.enabled=true
-  management.endpoint.health.show-details=always
+---
+
+## Phase 3: Helm Deploy
+
+### 3.1 Validate Helm chart
+- [ ] Lint: `helm lint ./helm/cicd`
+- [ ] Template dry-run: `helm template cicd ./helm/cicd` — renders without errors
+
+### 3.2 Deploy to Minikube
+- [ ] Install:
+  ```bash
+  helm install cicd ./helm/cicd -n cicd --create-namespace
   ```
-  - **Files**: `worker/src/main/resources/application.properties`
+- [ ] Watch pods come up: `kubectl get pods -n cicd -w`
+- [ ] All pods Running/Ready:
+  - [ ] `cicd-cicd-server` (1/1)
+  - [ ] `cicd-cicd-worker` (2/2 — app + DinD sidecar)
+  - [ ] `cicd-cicd-postgresql` (1/1)
+  - [ ] `cicd-cicd-rabbitmq` (1/1)
+  - [ ] `cicd-cicd-minio` (1/1)
+  - [ ] `cicd-cicd-otel-collector` (1/1)
+  - [ ] `cicd-cicd-prometheus` (1/1)
+  - [ ] `cicd-cicd-loki` (1/1)
+  - [ ] `cicd-cicd-tempo` (1/1)
+  - [ ] `cicd-cicd-grafana` (1/1)
+- [ ] Check server health: `kubectl port-forward svc/cicd-cicd-server 8080:8080 -n cicd` then `curl localhost:8080/actuator/health`
 
-- [x] Verify: start server, `curl localhost:8080/actuator/prometheus` should return Prometheus format
-
----
-
-## Phase 4: Metrics Instrumentation
-
-### 4.1 Create metrics service
-- [x] Create `server/src/main/java/cicd/observability/CicdMetrics.java`:
-  - Inject `MeterRegistry`
-  - Register the 5 required metrics using Micrometer API:
-    - `cicd_pipeline_runs_total` — `Counter.builder("cicd.pipeline.runs.total").tag("pipeline", name).tag("status", status).register(registry)`
-    - `cicd_pipeline_duration_seconds` — `Timer.builder("cicd.pipeline.duration.seconds").tag("pipeline", name).register(registry)`
-    - `cicd_stage_duration_seconds` — `Timer.builder("cicd.stage.duration.seconds").tag("pipeline", name).tag("stage", stage).register(registry)`
-    - `cicd_job_duration_seconds` — `Timer.builder("cicd.job.duration.seconds").tag("pipeline", name).tag("stage", stage).tag("job", job).register(registry)`
-    - `cicd_job_runs_total` — `Counter.builder("cicd.job.runs.total").tag("pipeline", name).tag("stage", stage).tag("job", job).tag("status", status).register(registry)`
-  - Provide methods: `recordPipelineCompleted(name, status, durationMs)`, `recordStageCompleted(...)`, `recordJobCompleted(...)`
-  - Enable exemplars: attach trace-id to timer recordings
-  - **Files**: `server/src/main/java/cicd/observability/CicdMetrics.java`
-
-### 4.2 Instrument StatusUpdateListener to record metrics
-- [x] Inject `CicdMetrics` into `StatusUpdateListener`
-  - On pipeline completion (status change to SUCCESS/FAILED): call `recordPipelineCompleted`
-  - On stage completion: call `recordStageCompleted`
-  - On job completion: call `recordJobCompleted`
-  - Calculate duration from `startTime` to `endTime` in the status update message
-  - **Files**: `server/src/main/java/cicd/listener/StatusUpdateListener.java`
-
-- [x] Verify: run a pipeline, check `curl localhost:8080/actuator/prometheus | grep cicd_`
+### 3.3 Troubleshoot if needed
+- If pods crash: `kubectl describe pod <name> -n cicd` and `kubectl logs <name> -n cicd`
+- If PVC issues: `kubectl get pvc -n cicd` — Minikube uses `standard` StorageClass by default
+- If image pull errors: ensure `pullPolicy: IfNotPresent` and images are loaded
+- If MinIO bucket creation fails on startup: check MinIO pod logs and worker logs for connection errors
 
 ---
 
-## Phase 5: Distributed Tracing
+## Phase 4: End-to-End Validation — Artifacts
 
-### 5.1 Trace context propagation via RabbitMQ headers
-- [x] Create `common/src/main/java/cicd/observability/TraceContextHelper.java`:
-  - `injectContext(MessageProperties props)` — uses `W3CTraceContextPropagator` to inject current span context into AMQP message headers
-  - `extractContext(MessageProperties props)` — extracts context from AMQP headers, returns `Context`
-  - **Files**: `common/src/main/java/cicd/observability/TraceContextHelper.java`, `common/build.gradle` (add otel-api + otel-context dependency)
-
-- [x] Create `server/src/main/java/cicd/config/TracingRabbitTemplate.java` (or modify `RabbitMqConfig`):
-  - Wrap `RabbitTemplate` with a `MessagePostProcessor` that calls `TraceContextHelper.injectContext()` on every outgoing message
-  - **Files**: `server/src/main/java/cicd/config/RabbitMqConfig.java`
-
-- [x] Do the same for worker's `RabbitTemplate`:
-  - **Files**: `worker/src/main/java/cicd/config/RabbitMqConfig.java`
-
-### 5.2 Add traceId field to messages
-- [x] Add `String traceId` field to `PipelineExecuteMessage`:
-  - Server sets this when creating the root span, before publishing
-  - Worker reads it and stores alongside the run
-  - **Files**: `common/src/main/java/cicd/messaging/PipelineExecuteMessage.java`
-
-- [x] Add `String traceId` field to `StatusUpdateMessage`:
-  - Worker sets this on pipeline-level status updates so server can persist trace_id
-  - **Files**: `common/src/main/java/cicd/messaging/StatusUpdateMessage.java`
-
-### 5.3 Instrument PipelineExecutionController (server-side root span creation)
-- [x] In `PipelineExecutionController` (or wherever the `PipelineRunEntity` is created and `PipelineExecuteMessage` is published):
-  - Create root span: `tracer.spanBuilder("pipeline: " + name).startSpan()`
-  - Extract trace-id: `span.getSpanContext().getTraceId()`
-  - Set `traceId` on the `PipelineRunEntity` before saving to DB
-  - Set `traceId` on the `PipelineExecuteMessage` before publishing
-  - End span immediately (the real work happens in worker; server just initiates)
-  - Actually — **alternative approach**: pass the trace context via message headers, let the Worker create the actual root span. Server just injects a "initiation span" that becomes parent.
-  - Recommended: Server creates a short "pipeline.initiate" span → injects context into message → Worker extracts and creates long-running "pipeline.execute" root span. The trace-id from the server's initiation span IS the trace-id for the whole pipeline.
-  - Store trace-id to DB here (before message publish).
-  - **Files**: `server/src/main/java/cicd/api/controller/PipelineExecutionController.java`, `server/src/main/java/cicd/service/` (wherever PipelineRunEntity is created)
-
-### 5.4 Instrument PipelineOrchestrationListener (worker-side pipeline span)
-- [x] In `onPipelineExecute()`:
-  - Extract parent context from incoming message headers using `TraceContextHelper.extractContext()`
-  - Create child span: `tracer.spanBuilder("pipeline: " + name).setParent(extractedCtx).startSpan()`
-  - Set span attributes: `run_no`, `pipeline` (as required by spec)
-  - Wrap entire method body in try-finally with `span.end()`
-  - Make this span the current context using `span.makeCurrent()` (so child spans auto-attach)
-  - **Files**: `worker/src/main/java/cicd/listener/PipelineOrchestrationListener.java`
-
-- [x] For each stage loop iteration:
-  - Create child span: `tracer.spanBuilder("stage: " + stageName).startSpan()`
-  - Set as current before dispatching jobs
-  - End after stage completes
-  - **Files**: `worker/src/main/java/cicd/listener/PipelineOrchestrationListener.java`
-
-- [x] When dispatching `JobExecuteMessage`:
-  - Inject current span context (which is the stage span) into message headers
-  - **Files**: `worker/src/main/java/cicd/listener/PipelineOrchestrationListener.java`
-
-### 5.5 Instrument JobExecutionListener (job spans)
-- [x] In `onJobExecute()`:
-  - Extract parent context from message headers (stage span)
-  - Create child span: `tracer.spanBuilder("job: " + jobName).startSpan()`
-  - Set attributes: pipeline, stage, job, image
-  - Wrap Docker execution in try-finally with `span.end()`
-  - On failure: `span.setStatus(StatusCode.ERROR)` and `span.recordException()`
-  - **Files**: `worker/src/main/java/cicd/listener/JobExecutionListener.java`
-
-### 5.6 Persist trace-id from StatusUpdateMessage
-- [x] In `StatusUpdateListener.handlePipeline()`:
-  - If `msg.getTraceId() != null`, set `run.setTraceId(msg.getTraceId())`
-  - **Files**: `server/src/main/java/cicd/listener/StatusUpdateListener.java`
-
-- [x] In `StatusUpdatePublisher.pipelineRunning()`:
-  - Extract current trace-id from OTel context: `Span.current().getSpanContext().getTraceId()`
-  - Set on the `StatusUpdateMessage`
-  - **Files**: `worker/src/main/java/cicd/service/StatusUpdatePublisher.java`
-
-- [x] Verify: run a pipeline, check DB: `SELECT trace_id FROM pipeline_runs WHERE run_no = 1`
-
----
-
-## Phase 6: Job Container Log Forwarding
-
-### 6.1 Stream Docker container logs to OTel
-- [x] Modify `LocalDockerRunner.runJob()`:
-  - After container starts, use `dockerClient.logContainerCmd(containerId).withFollowStream(true).withStdOut(true).withStdErr(true)` to stream logs in real-time
-  - For each log frame, emit an OTel log record via `LoggerProvider` / SLF4J bridge with:
-    - Attributes: `pipeline`, `run_no`, `stage`, `job`, `source=job-container`
-    - The log message = the frame payload
-  - Still capture full output into `StringBuilder` for `JobResult.output()` (existing behavior preserved)
-  - **Files**: `worker/src/main/java/cicd/docker/LocalDockerRunner.java`
-
-- [x] Update `DockerRunner` interface to accept metadata context:
-  - Add overload or parameter object: `JobContext { pipeline, runNo, stage, job }`
-  - Or: set MDC before calling `runJob()` in `JobExecutionListener` (simpler, MDC flows into log appender)
-  - Recommended: Use MDC approach — set MDC in `JobExecutionListener` before calling `dockerRunner.runJob()`, and in `LocalDockerRunner`, log each container output line via SLF4J (MDC automatically included)
-  - **Files**: `worker/src/main/java/cicd/listener/JobExecutionListener.java`, `worker/src/main/java/cicd/docker/LocalDockerRunner.java`
-
-- [x] Add a "source" MDC field to distinguish system logs vs container logs:
-  - System logs: `MDC.put("source", "system")`
-  - Container logs: `MDC.put("source", "job-container")`
-  - **Files**: various listener files
-
----
-
-## Phase 7: Report Command Changes
-
-### 7.1 Add trace-id to report API response
-- [x] Add `traceId` field to `PipelineRunDetailResponse.java`:
-  ```java
-  @JsonProperty("trace-id")
-  private String traceId;
+### 4.1 Test artifacts with demo-success pipeline
+- [ ] Port-forward server: `kubectl port-forward svc/cicd-cicd-server 8080:8080 -n cicd`
+- [ ] Run pipeline with artifacts:
+  ```bash
+  java -jar cli/build/libs/cli-0.1.0.jar run \
+    --file .pipelines/demo-success.yaml \
+    --repo-url https://github.com/lietcooper/fail-demo-repo \
+    --server http://localhost:8080
   ```
-  - **Files**: `server/src/main/java/cicd/api/dto/PipelineRunDetailResponse.java`
-
-- [x] Add `traceId` to `RunSummaryDto.java` (for level-1 report):
-  ```java
-  @JsonProperty("trace-id")
-  private String traceId;
+- [ ] Wait for completion, check status:
+  ```bash
+  java -jar cli/build/libs/cli-0.1.0.jar status \
+    --file .pipelines/demo-success.yaml --run N \
+    --server http://localhost:8080
   ```
-  - **Files**: `server/src/main/java/cicd/api/dto/RunSummaryDto.java`
+- [ ] Verify report includes artifacts:
+  ```bash
+  java -jar cli/build/libs/cli-0.1.0.jar report \
+    --pipeline demo-success --run N \
+    --server http://localhost:8080
+  ```
+  - Should show artifact patterns and download locations for each job
 
-- [x] Update `ReportService.java` to populate `traceId` from entity:
-  - In `toRunSummary()`: `dto.setTraceId(entity.getTraceId())`
-  - In `getRun()`, `getStage()`, `getJob()`: `response.setTraceId(run.getTraceId())`
-  - **Files**: `server/src/main/java/cicd/service/ReportService.java`
+### 4.2 Test failed pipeline (no artifacts expected)
+- [ ] Run demo-fail pipeline
+- [ ] Verify: status is FAILED, no artifacts uploaded (artifacts only upload on job success)
 
-### 7.2 Update CLI report output
-- [x] In `ReportCmd.printRunDetail()`:
-  - Add line: `System.out.println("trace-id: " + text(json, "trace-id"));` after the status line
-  - **Files**: `cli/src/main/java/cicd/cmd/ReportCmd.java`
-
-- [x] In `ReportCmd.printLevel1()` (per-run in the list):
-  - Add: `System.out.println("    trace-id: " + text(rn, "trace-id"));`
-  - **Files**: `cli/src/main/java/cicd/cmd/ReportCmd.java`
-
----
-
-## Phase 8: Helm Chart — Observability Stack
-
-### 8.1 Add OTel Collector
-- [x] Add to `helm/cicd/values.yaml`: `otelCollector` section (image: `otel/opentelemetry-collector-contrib`, ports: 4317 gRPC, 4318 HTTP)
-- [x] Create `helm/cicd/templates/otel-collector-deployment.yaml`: Deployment + Service
-- [x] Create `helm/cicd/templates/otel-collector-configmap.yaml`: Collector config YAML:
-  - Receivers: `otlp` (grpc:4317, http:4318)
-  - Exporters: `prometheus` (for metrics→Prometheus), `loki` (for logs→Loki), `otlp/tempo` (for traces→Tempo)
-  - Pipelines: metrics→prometheus, logs→loki, traces→otlp/tempo
-  - **Files**: `helm/cicd/values.yaml`, `helm/cicd/templates/otel-collector-deployment.yaml`, `helm/cicd/templates/otel-collector-configmap.yaml`
-
-### 8.2 Add Prometheus
-- [x] Add to `values.yaml`: `prometheus` section (image: `prom/prometheus`, storage: 5Gi)
-- [x] Create `helm/cicd/templates/prometheus-statefulset.yaml`: StatefulSet + Service + PVC
-- [x] Create `helm/cicd/templates/prometheus-configmap.yaml`: scrape config:
-  - Scrape server at `cicd-server:8080/actuator/prometheus`
-  - Scrape worker at `cicd-worker:8081/actuator/prometheus`
-  - Scrape interval: 15s
-  - Enable exemplar storage
-  - **Files**: `helm/cicd/values.yaml`, `helm/cicd/templates/prometheus-statefulset.yaml`, `helm/cicd/templates/prometheus-configmap.yaml`
-
-### 8.3 Add Loki
-- [x] Add to `values.yaml`: `loki` section (image: `grafana/loki`, storage: 5Gi)
-- [x] Create `helm/cicd/templates/loki-statefulset.yaml`: StatefulSet + Service + PVC
-- [x] Create `helm/cicd/templates/loki-configmap.yaml`: Loki config (auth disabled, single-tenant, filesystem storage)
-  - **Files**: `helm/cicd/values.yaml`, `helm/cicd/templates/loki-statefulset.yaml`, `helm/cicd/templates/loki-configmap.yaml`
-
-### 8.4 Add Tempo
-- [x] Add to `values.yaml`: `tempo` section (image: `grafana/tempo`, storage: 5Gi)
-- [x] Create `helm/cicd/templates/tempo-statefulset.yaml`: StatefulSet + Service + PVC
-- [x] Create `helm/cicd/templates/tempo-configmap.yaml`: Tempo config (OTLP receiver, local filesystem backend)
-  - **Files**: `helm/cicd/values.yaml`, `helm/cicd/templates/tempo-statefulset.yaml`, `helm/cicd/templates/tempo-configmap.yaml`
-
-### 8.5 Add Grafana
-- [x] Add to `values.yaml`: `grafana` section (image: `grafana/grafana`, service type: ClusterIP or NodePort for access)
-- [x] Create `helm/cicd/templates/grafana-deployment.yaml`: Deployment + Service
-- [x] Create `helm/cicd/templates/grafana-configmap.yaml`: Contains:
-  - Datasource provisioning (Prometheus, Loki, Tempo, PostgreSQL)
-  - Dashboard provisioning config (points to dashboard JSON files)
-  - **Files**: `helm/cicd/values.yaml`, `helm/cicd/templates/grafana-deployment.yaml`, `helm/cicd/templates/grafana-configmap.yaml`
-
-### 8.6 Update existing Helm templates
-- [x] Update `helm/cicd/templates/server-deployment.yaml`:
-  - Add env var `OTEL_EXPORTER_OTLP_ENDPOINT` pointing to `http://cicd-otel-collector:4317`
-  - Add env var `OTEL_SERVICE_NAME=cicd-server`
-  - Update liveness/readiness to use `/actuator/health` instead of TCP socket
-  - **Files**: `helm/cicd/templates/server-deployment.yaml`
-
-- [x] Update `helm/cicd/templates/worker-deployment.yaml`:
-  - Same OTel env vars with `OTEL_SERVICE_NAME=cicd-worker`
-  - Update probes similarly
-  - **Files**: `helm/cicd/templates/worker-deployment.yaml`
-
-- [x] Update `helm/cicd/templates/configmap.yaml`:
-  - Add OTel-related config entries
-  - **Files**: `helm/cicd/templates/configmap.yaml`
-
-- [x] Verify: `helm template cicd ./helm/cicd` renders without errors
-
-### 8.7 Add health check probes for observability components
-- [x] Add liveness/readiness probes to all new StatefulSets/Deployments:
-  - Prometheus: `/-/healthy` on port 9090
-  - Loki: `/ready` on port 3100
-  - Tempo: `/ready` on port 3200
-  - Grafana: `/api/health` on port 3000
-  - OTel Collector: `health_check` extension on port 13133
-  - **Files**: respective template files created above
+### 4.3 Test observability still works
+- [ ] Metrics: `curl localhost:8080/actuator/prometheus | grep cicd_`
+- [ ] Report trace-id: `cicd report --pipeline demo-success --run N` shows `trace-id` field
+- [ ] Port-forward Grafana: `kubectl port-forward svc/cicd-cicd-grafana 3000:3000 -n cicd`
+  - [ ] Dashboard 1 (Pipeline Overview) shows runs
+  - [ ] Dashboard 4 (Trace Explorer) shows span hierarchy
+  - [ ] Dashboard 3 (Logs Viewer) shows logs
+  - [ ] Dashboard 2 (Stage & Job Breakdown) shows metrics
 
 ---
 
-## Phase 9: Grafana Dashboards (Configuration as Code)
+## Phase 5: Demo Preparation
 
-### 9.1 Dashboard 1: Pipeline Overview
-- [x] Create `helm/cicd/dashboards/pipeline-overview.json`:
-  - Panel 1: Stat/bar chart — total pipeline runs by status (PromQL: `sum by (status) (cicd_pipeline_runs_total)`)
-  - Panel 2: Time series — pipeline duration over time (PromQL: `histogram_quantile(0.95, rate(cicd_pipeline_duration_seconds_bucket[5m]))`)
-  - Panel 3: Table — recent runs from PostgreSQL datasource (`SELECT pipeline_name, run_no, git_branch, git_hash, status, trace_id, start_time, end_time, EXTRACT(EPOCH FROM (end_time - start_time)) as duration_seconds FROM pipeline_runs ORDER BY start_time DESC LIMIT 20`)
-  - Panel 3 should include a data link: click trace-id → open Dashboard 4 filtered to that trace
-  - Template variables: time range picker
-  - **Files**: `helm/cicd/dashboards/pipeline-overview.json`
+### 5.1 Update demo script for Minikube + artifacts
+- [ ] Update `demo-observability.sh` (or create new `demo-artifacts.sh`):
+  - Setup phase: `minikube start`, port-forwards, pre-seed data
+  - Part 1: Trigger demo-success (with artifacts) and demo-fail
+  - Part 2: Show report with artifacts + trace-id
+  - Part 3: Show metrics endpoint
+  - Part 4-7: Grafana dashboards (browser)
+  - Part 8: Show artifact patterns in YAML (`cat .pipelines/demo-success.yaml`)
+  - Part 9: Configuration as code (Helm chart structure, dashboards)
+  - Part 10: Alert rules
+- [ ] Ensure `SERVER` var uses `http://localhost:8080` (port-forwarded)
+- [ ] Make sure demo works with Minikube (not EC2 IP)
 
-### 9.2 Dashboard 2: Stage & Job Breakdown
-- [x] Create `helm/cicd/dashboards/stage-job-breakdown.json`:
-  - Template variables: `pipeline` (dropdown from label values), `run_no` (from PostgreSQL query or label values)
-  - Panel 1: Bar chart — per-stage duration (PromQL or PostgreSQL query)
-  - Panel 2: Bar chart — per-job duration within selected pipeline+run
-  - Panel 3: Stat — job success/failure counts (PromQL: `sum by (status) (cicd_job_runs_total{pipeline="$pipeline"})`)
-  - **Files**: `helm/cicd/dashboards/stage-job-breakdown.json`
+### 5.2 Update demo script (talk track)
+- [ ] Update `demo-observability-script.md` to include artifacts demo points:
+  - Show artifact patterns in pipeline YAML
+  - Show `cicd report` output with artifact download locations
+  - Explain MinIO storage (S3-compatible, deployed in K8s)
+  - Link artifacts to observability (traces show artifact collection timing)
 
-### 9.3 Dashboard 3: Logs Viewer
-- [x] Create `helm/cicd/dashboards/logs-viewer.json`:
-  - Template variables: `pipeline`, `run_no`, `stage`, `job` (all from Loki label values)
-  - Panel 1: Logs panel — LogQL query: `{pipeline="$pipeline", run_no="$run_no", stage=~"$stage", job=~"$job"}`
-  - Must show both system logs (`source="system"`) and container logs (`source="job-container"`) with source distinguishable
-  - Add `source` as a filterable template variable
-  - **Files**: `helm/cicd/dashboards/logs-viewer.json`
-
-### 9.4 Dashboard 4: Trace Explorer
-- [x] Create `helm/cicd/dashboards/trace-explorer.json`:
-  - Template variable: `run_no`
-  - Option A (recommended): Use Grafana's built-in Tempo trace viewer panel. Query Tempo by trace-id (fetched from PostgreSQL based on run_no).
-  - Option B: Embed a direct link to Tempo's trace view UI
-  - Panel: Traces panel showing full span hierarchy pipeline→stage→job with durations
-  - **Files**: `helm/cicd/dashboards/trace-explorer.json`
-
-### 9.5 Wire dashboards into Grafana provisioning
-- [x] Add dashboard JSON files as a ConfigMap in Helm:
-  - Create `helm/cicd/templates/grafana-dashboards-configmap.yaml` that mounts all 4 JSON files
-  - Reference in Grafana's provisioning config (`dashboards.yaml` provider pointing to `/var/lib/grafana/dashboards/`)
-  - **Files**: `helm/cicd/templates/grafana-dashboards-configmap.yaml`, update `helm/cicd/templates/grafana-configmap.yaml`
+### 5.3 Dry run
+- [ ] Run full demo end-to-end on Minikube
+- [ ] Verify all CLI commands produce expected output
+- [ ] Verify all Grafana dashboards load correctly
+- [ ] Time the demo (target: ~8 minutes)
 
 ---
 
-## Phase 10: Prometheus Alert Rules (Extra Credit)
+## Phase 6: Final Cleanup
 
-- [x] Create `helm/cicd/templates/prometheus-rules-configmap.yaml`:
-  - Rule 1: `CicdPipelineConsecutiveFailures` — alert if pipeline fails 3+ times in a row
-  - Rule 2: `CicdJobDurationHigh` — alert if any job duration p95 > 10 minutes
-  - Rule 3: `CicdPipelineDurationHigh` — alert if pipeline duration p95 > 30 minutes
-  - Mount as additional config in Prometheus StatefulSet
-  - **Files**: `helm/cicd/templates/prometheus-rules-configmap.yaml`, update `helm/cicd/templates/prometheus-configmap.yaml`
-
----
-
-## Phase 11: Testing & Validation
-
-### 11.1 Unit tests for new code
-- [x] Test `CicdMetrics`: verify counters increment, timers record, correct tags
-  - **Files**: `server/src/test/java/cicd/observability/CicdMetricsTest.java`
-
-- [x] Test `TraceContextHelper`: verify inject/extract roundtrip with mock `MessageProperties`
-  - **Files**: `common/src/test/java/cicd/observability/TraceContextHelperTest.java`
-
-- [x] Test trace-id in `ReportService`: verify traceId appears in DTOs
-  - **Files**: `server/src/test/java/cicd/service/ReportServiceTraceIdTest.java`
-
-- [x] Test `ReportCmd` output includes trace-id line
-  - **Files**: `cli/src/test/java/cicd/cmd/ReportCmdTraceIdTest.java`
-
-### 11.2 Integration validation
-- [x] Deploy full stack via Helm, run a test pipeline, verify:
-  - [x] `curl server:8080/actuator/prometheus | grep cicd_` returns all 5 required metrics
-  - [x] Grafana Dashboard 1 shows pipeline runs
-  - [x] Grafana Dashboard 2 shows stage/job breakdown for a selected run
-  - [x] Grafana Dashboard 3 shows logs filterable by pipeline/run_no/stage/job, both system and container sources visible
-  - [x] Grafana Dashboard 4 shows trace hierarchy for a run
-  - [x] `cicd report --pipeline default --run 1` outputs trace-id field
-  - [x] Clicking trace-id in Dashboard 1 navigates to Dashboard 4
-  - [x] Prometheus alert rules are loaded (`curl prometheus:9090/api/v1/rules`)
-
----
-
-## Phase 12: Documentation
-
-- [x] Update `README.md`:
-  - Add Observability section explaining the stack
-  - Document how to access Grafana (port-forward command)
-  - Document dashboard descriptions
-  - List the substitution justifications if any component was swapped
-  - **Files**: `README.md`
-
-- [x] Update Helm `values.yaml` with inline comments for all new config options
-  - **Files**: `helm/cicd/values.yaml`
-
----
-
-## Summary of New Files to Create
-
-```
-server/src/main/resources/db/migration/V3__add_trace_id_to_pipeline_runs.sql
-server/src/main/resources/logback-spring.xml
-worker/src/main/resources/logback-spring.xml
-server/src/main/java/cicd/config/OpenTelemetryConfig.java
-worker/src/main/java/cicd/config/OpenTelemetryConfig.java
-server/src/main/java/cicd/observability/CicdMetrics.java
-common/src/main/java/cicd/observability/TraceContextHelper.java
-helm/cicd/templates/otel-collector-deployment.yaml
-helm/cicd/templates/otel-collector-configmap.yaml
-helm/cicd/templates/prometheus-statefulset.yaml
-helm/cicd/templates/prometheus-configmap.yaml
-helm/cicd/templates/prometheus-rules-configmap.yaml
-helm/cicd/templates/loki-statefulset.yaml
-helm/cicd/templates/loki-configmap.yaml
-helm/cicd/templates/tempo-statefulset.yaml
-helm/cicd/templates/tempo-configmap.yaml
-helm/cicd/templates/grafana-deployment.yaml
-helm/cicd/templates/grafana-configmap.yaml
-helm/cicd/templates/grafana-dashboards-configmap.yaml
-helm/cicd/dashboards/pipeline-overview.json
-helm/cicd/dashboards/stage-job-breakdown.json
-helm/cicd/dashboards/logs-viewer.json
-helm/cicd/dashboards/trace-explorer.json
-server/src/test/java/cicd/observability/CicdMetricsTest.java
-common/src/test/java/cicd/observability/TraceContextHelperTest.java
-```
-
-## Summary of Files to Modify
-
-```
-build.gradle (root) — no changes needed
-server/build.gradle — add OTel, Micrometer, Actuator, Logstash deps
-worker/build.gradle — add OTel, Logstash deps
-common/build.gradle — add SLF4J, OTel API deps
-server/src/main/resources/application.properties — add Actuator config
-worker/src/main/resources/application.properties — add Actuator config
-server/src/main/java/cicd/persistence/entity/PipelineRunEntity.java — add traceId
-server/src/main/java/cicd/listener/StatusUpdateListener.java — metrics + traceId persistence + SLF4J
-server/src/main/java/cicd/service/ReportService.java — populate traceId in DTOs
-server/src/main/java/cicd/api/dto/PipelineRunDetailResponse.java — add traceId field
-server/src/main/java/cicd/api/dto/RunSummaryDto.java — add traceId field
-server/src/main/java/cicd/api/controller/PipelineExecutionController.java — create root span
-server/src/main/java/cicd/config/RabbitMqConfig.java — add trace context post-processor
-server/src/main/java/cicd/messaging/PipelineMessagePublisher.java — SLF4J
-worker/src/main/java/cicd/config/RabbitMqConfig.java — add trace context post-processor
-worker/src/main/java/cicd/listener/PipelineOrchestrationListener.java — tracing + SLF4J
-worker/src/main/java/cicd/listener/JobExecutionListener.java — tracing + log forwarding + SLF4J
-worker/src/main/java/cicd/listener/JobResultListener.java — SLF4J
-worker/src/main/java/cicd/docker/LocalDockerRunner.java — stream logs via SLF4J
-worker/src/main/java/cicd/service/StatusUpdatePublisher.java — inject traceId + SLF4J
-worker/src/main/java/cicd/service/StatusEventPublisher.java — SLF4J
-common/src/main/java/cicd/messaging/PipelineExecuteMessage.java — add traceId field
-common/src/main/java/cicd/messaging/StatusUpdateMessage.java — add traceId field
-cli/src/main/java/cicd/cmd/ReportCmd.java — print trace-id
-helm/cicd/values.yaml — add observability component configs
-helm/cicd/templates/server-deployment.yaml — add OTel env vars, update probes
-helm/cicd/templates/worker-deployment.yaml — add OTel env vars, update probes
-helm/cicd/templates/configmap.yaml — add OTel config entries
-helm/cicd/Chart.yaml — bump version
-README.md — add observability docs
-```
+- [ ] Ensure `./gradlew clean build` passes (all tests green)
+- [ ] Ensure `helm lint ./helm/cicd` clean
+- [ ] Remove any hardcoded EC2 IPs from scripts (replace with `localhost`)
+- [ ] Commit and push all changes

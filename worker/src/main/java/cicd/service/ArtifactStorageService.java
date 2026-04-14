@@ -32,6 +32,7 @@ public class ArtifactStorageService {
   private final String bucket;
 
   /** Creates the service with MinIO configuration. */
+  @org.springframework.beans.factory.annotation.Autowired
   public ArtifactStorageService(
       @Value("${cicd.minio.endpoint:http://localhost:9000}")
       String endpoint,

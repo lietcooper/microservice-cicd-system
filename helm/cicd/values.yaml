@@ -73,6 +73,7 @@ minio:
   secretKey: minioadmin
   bucket: cicd-artifacts
   storage: 5Gi
+  storageClass: ""           # empty = use cluster default (e.g. "standard" on Minikube)
   port: 9000
   consolePort: 9001
   # Used only when enabled: false

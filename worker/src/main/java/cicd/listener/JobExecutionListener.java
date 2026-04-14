@@ -17,6 +17,7 @@ import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.slf4j.Logger;
@@ -114,15 +115,25 @@ public class JobExecutionListener {
       JobResult result = dockerRunner.runJob(
           msg.getImage(), msg.getScripts(), msg.getWorkspacePath());
 
-      // Collect and store artifacts on success
+      // Collect and store artifacts on success.
+      // Build aligned lists so each storagePath has the pattern that produced it.
       List<String> storedArtifacts = Collections.emptyList();
+      List<String> alignedPatterns = Collections.emptyList();
       if (result.ok() && msg.getArtifacts() != null
           && !msg.getArtifacts().isEmpty()) {
-        List<String> matched = artifactCollector.collect(
-            msg.getArtifacts(), Path.of(msg.getWorkspacePath()));
-        storedArtifacts = artifactStorage.store(matched,
-            Path.of(msg.getWorkspacePath()),
-            msg.getPipelineName(), msg.getRunNo(),
+        Path workspace = Path.of(msg.getWorkspacePath());
+        alignedPatterns = new ArrayList<>();
+        List<String> allMatched = new ArrayList<>();
+        for (String pattern : msg.getArtifacts()) {
+          List<String> files = artifactCollector.collect(
+              List.of(pattern), workspace);
+          for (String f : files) {
+            alignedPatterns.add(pattern);
+            allMatched.add(f);
+          }
+        }
+        storedArtifacts = artifactStorage.store(allMatched,
+            workspace, msg.getPipelineName(), msg.getRunNo(),
             msg.getStageName(), msg.getJobName());
       }
 
@@ -130,7 +141,7 @@ public class JobExecutionListener {
       statusPublisher.jobCompleted(msg.getPipelineRunId(),
           msg.getPipelineName(), msg.getRunNo(),
           msg.getStageName(), msg.getJobName(), result.ok(),
-          msg.getArtifacts(), storedArtifacts);
+          alignedPatterns, storedArtifacts);
 
       eventPublisher.publishJobCompleted(msg.getPipelineRunId(),
           msg.getPipelineName(), msg.getRunNo(),
