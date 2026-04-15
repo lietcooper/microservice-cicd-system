@@ -6,7 +6,7 @@ This diagram walks through the end-to-end execution flow of `cicd run --name def
 the order of execution, what each component does, how data flows, and where data gets persisted.
 
 - Simplified architecture
-![high-level-architecture-demo.svg](images/high-level-architecture-demo.svg)
+![final-architecture.drawio.svg](images/final-architecture.drawio.svg)
 - Detailed architecture:
 ```mermaid
 flowchart TB

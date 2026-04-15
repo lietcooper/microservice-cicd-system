@@ -1,3 +1,38 @@
+apply plugin: 'jacoco'
+
+repositories {
+    mavenCentral()
+}
+
+task jacocoAggregatedReport(type: JacocoReport) {
+    subprojects.each { dependsOn("${it.path}:test") }
+
+    executionData.setFrom(subprojects.collect {
+        file("${it.buildDir}/jacoco/test.exec")
+    })
+
+    reports {
+        html.required = true
+        xml.required = true
+        html.outputLocation = layout.buildDirectory.dir('reports/jacoco/aggregated/html')
+        xml.outputLocation = layout.buildDirectory.file('reports/jacoco/aggregated/jacoco.xml')
+    }
+}
+
+gradle.projectsEvaluated {
+    jacocoAggregatedReport {
+        def allSources = files(subprojects.collect { it.sourceSets.main.allSource })
+        additionalSourceDirs.setFrom(allSources)
+        sourceDirectories.setFrom(allSources)
+
+        // Deduplicate classes that share the same fully-qualified name across modules
+        def seen = new HashSet<String>()
+        classDirectories.setFrom(files(subprojects.collect { it.sourceSets.main.output }).asFileTree.filter {
+            seen.add(it.path.replaceAll('.*/classes/java/main/', ''))
+        })
+    }
+}
+
 subprojects {
     apply plugin: 'java'
     apply plugin: 'jacoco'
