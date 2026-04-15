@@ -14,6 +14,7 @@ import picocli.CommandLine.Parameters;
 /** Validates pipeline YAML configuration files. */
 @Command(
     name = "verify",
+    mixinStandardHelpOptions = true,
     description = "Validate a pipeline YAML configuration file"
 )
 public class VerifyCmd implements Callable<Integer> {

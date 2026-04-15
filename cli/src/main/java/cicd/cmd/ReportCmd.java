@@ -14,6 +14,7 @@ import picocli.CommandLine.Option;
 /** Queries and displays pipeline execution history from the server. */
 @Command(
     name = "report",
+    mixinStandardHelpOptions = true,
     description = "Query pipeline execution history"
 )
 public class ReportCmd implements Callable<Integer> {

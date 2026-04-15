@@ -19,6 +19,7 @@ import picocli.CommandLine.Option;
 /** Executes a CI/CD pipeline via the REST API. */
 @Command(
     name = "run",
+    mixinStandardHelpOptions = true,
     description = "Execute a CI/CD pipeline via REST API"
 )
 public class RunCmd implements Callable<Integer> {
