@@ -15,6 +15,7 @@ import picocli.CommandLine.Parameters;
 /** Dry-run command that validates and prints execution order. */
 @Command(
     name = "dryrun",
+    mixinStandardHelpOptions = true,
     description = "Dry-run a pipeline: validate and print execution order"
 )
 public class DryrunCmd implements Callable<Integer> {

@@ -22,7 +22,7 @@ Developer mode starts only PostgreSQL and RabbitMQ:
 docker compose up -d
 ```
 
-For evaluator / non-developer setup, use [sprint5-non-developer-guide.md](/Users/lijunwan/Documents/NEU/cs7580/assignments/d-team/sprint5-non-developer-guide.md) and `docker-compose.evaluator.yaml`.
+For evaluator / non-developer setup, use [sprint5-non-developer-guide.md](sprint5-non-developer-guide.md) and `docker-compose.evaluator.yaml`.
 
 Run the server:
 
@@ -55,6 +55,16 @@ Or run the jar:
 ```bash
 java -jar cli/build/libs/cli-0.1.0.jar verify .pipelines/default.yaml
 ```
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [CLI Reference](dev-docs/cli-reference.md) | Full list of commands, options, exit codes, and examples |
+| [API Reference](dev-docs/api-reference.md) | Server REST API endpoints, inputs, outputs, and errors |
+| [System Architecture](dev-docs/design/system-architecture-diagrams.md) | End-to-end execution flow, message topology, database schema, wave execution |
+| [Kubernetes Deployment](K8S-SETUP.md) | Helm chart deployment guide with configuration reference |
+| [Feature Status](FeatureStatus.md) | Complete list of implemented, partial, and planned features |
 
 ## Commands
 
@@ -246,14 +256,50 @@ Three alert rules are pre-configured:
 | `CicdJobDurationHigh` | warning | Job p95 duration > 10 minutes |
 | `CicdPipelineDurationHigh` | warning | Pipeline p95 duration > 30 minutes |
 
-## Test
+## Test & Reports
+
+### Running Locally
+
+Run all tests:
 
 ```bash
 ./gradlew test
 ```
 
-## Coverage Report
+Generate aggregated test coverage report (all modules combined):
 
 ```bash
-./gradlew jacocoTestReport
+./gradlew jacocoAggregatedReport
 ```
+
+Output: `build/reports/jacoco/aggregated/html/index.html`
+
+Generate static analysis (Checkstyle) reports:
+
+```bash
+./gradlew checkstyleMain checkstyleTest
+```
+
+Output: `<module>/build/reports/checkstyle/main.html` for each module.
+
+Generate Javadoc:
+
+```bash
+./gradlew javadoc
+```
+
+Output: `<module>/build/docs/javadoc/index.html` for each module.
+
+### On GitHub Actions
+
+Three CI/CD workflows run automatically and upload reports as downloadable artifacts:
+
+| Workflow | Trigger | Artifacts Uploaded |
+|----------|---------|-------------------|
+| **PR Review** (`pr.yml`) | Pull request to `main` | test-results, coverage-report, checkstyle-reports |
+| **Main** (`main.yml`) | Push to `main` | test-results, coverage-report, checkstyle-reports, javadoc |
+| **Release** (`release.yml`) | Tag push (`v*`) | test-results, coverage-report, checkstyle-reports, javadoc |
+
+To download: go to the **Actions** tab on GitHub, click a workflow run, and scroll to the **Artifacts** section at the bottom of the summary page.
+
+The Main and Release workflows also build and push Docker images to `ghcr.io/cs7580-sea-sp26/d-team/{server,worker,cli}`, accessible from the repository's **Packages** tab.

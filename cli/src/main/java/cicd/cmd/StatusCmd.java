@@ -17,6 +17,7 @@ import picocli.CommandLine.Option;
 /** Queries and displays pipeline run status from the server. */
 @Command(
     name = "status",
+    mixinStandardHelpOptions = true,
     description = "Query pipeline run status"
 )
 public class StatusCmd implements Callable<Integer> {
