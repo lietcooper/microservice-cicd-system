@@ -22,7 +22,7 @@ Developer mode starts only PostgreSQL and RabbitMQ:
 docker compose up -d
 ```
 
-For evaluator / non-developer setup, use [sprint5-non-developer-guide.md](sprint5-non-developer-guide.md) and `docker-compose.evaluator.yaml`.
+For the current full deployment path, use the Helm chart in `helm/cicd/` and the Kubernetes health-check guide in [system-health-check.md](system-health-check.md).
 
 Run the server:
 
@@ -64,6 +64,7 @@ java -jar cli/build/libs/cli-0.1.0.jar verify .pipelines/default.yaml
 | [API Reference](dev-docs/api-reference.md) | Server REST API endpoints, inputs, outputs, and errors |
 | [System Architecture](dev-docs/design/system-architecture-diagrams.md) | End-to-end execution flow, message topology, database schema, wave execution |
 | [Kubernetes Deployment](K8S-SETUP.md) | Helm chart deployment guide with configuration reference |
+| [System Health Check](system-health-check.md) | Kubernetes and Helm health checks, smoke tests, and troubleshooting |
 | [Feature Status](FeatureStatus.md) | Complete list of implemented, partial, and planned features |
 
 ## Commands
@@ -155,7 +156,7 @@ The local example repository sources are:
 
 ## Kubernetes Deployment
 
-All system components can be deployed to Kubernetes via the Helm chart in `helm/cicd/`. See [K8S-SETUP.md](K8S-SETUP.md) for the full deployment guide.
+All system components can be deployed to Kubernetes via the Helm chart in `helm/cicd/`. See [K8S-SETUP.md](K8S-SETUP.md) for the deployment guide, then use [system-health-check.md](system-health-check.md) to verify the installation.
 
 ### Component K8s-Enablement
 
@@ -171,7 +172,7 @@ All system components can be deployed to Kubernetes via the Helm chart in `helm/
 Quick deploy:
 
 ```bash
-helm install cicd ./helm/cicd -n cicd --create-namespace
+helm upgrade --install cicd ./helm/cicd -n cicd --create-namespace
 kubectl port-forward svc/cicd-cicd-server 8080:8080 -n cicd
 ```
 
