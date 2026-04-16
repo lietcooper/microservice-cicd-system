@@ -38,8 +38,14 @@ FROM eclipse-temurin:17-jre AS server
 RUN apt-get update && apt-get install -y --no-install-recommends git \
     && rm -rf /var/lib/apt/lists/*
 
+# Create a non-root user
+RUN groupadd -r cicd && useradd -r -g cicd -u 1000 cicd
 WORKDIR /app
 COPY --from=build /app/server/build/libs/server-0.1.0.jar app.jar
+
+# Ensure the app can write to its work directory
+RUN chown -R cicd:cicd /app
+USER cicd
 
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
@@ -49,10 +55,15 @@ ENTRYPOINT ["java", "-jar", "app.jar"]
 # ============================================================
 FROM eclipse-temurin:17-jre AS worker
 
-RUN mkdir -p /tmp/cicd-workspaces
+# Create a non-root user and the workspace directory
+RUN groupadd -r cicd && useradd -r -g cicd -u 1000 cicd
+RUN mkdir -p /tmp/cicd-workspaces && chown -R cicd:cicd /tmp/cicd-workspaces
 
 WORKDIR /app
 COPY --from=build /app/worker/build/libs/worker-0.1.0.jar app.jar
+RUN chown -R cicd:cicd /app
+
+USER cicd
 
 EXPOSE 8081
 ENTRYPOINT ["java", "-Djava.io.tmpdir=/tmp/cicd-workspaces", "-jar", "app.jar"]
@@ -65,10 +76,16 @@ FROM eclipse-temurin:17-jre AS cli
 RUN apt-get update && apt-get install -y --no-install-recommends git \
     && rm -rf /var/lib/apt/lists/*
 
+# Create a non-root user
+RUN groupadd -r cicd && useradd -r -g cicd -u 1000 cicd
+
 # Allow git to work with mounted volumes (ownership mismatch)
-RUN git config --global --add safe.directory /workspace
+# We set this globally so it applies to the 'cicd' user
+RUN git config --system --add safe.directory /workspace
 
 WORKDIR /workspace
 COPY --from=build /app/cli/build/libs/cli-0.1.0.jar /app/cli.jar
+RUN chown -R cicd:cicd /app
 
+USER cicd
 ENTRYPOINT ["java", "-jar", "/app/cli.jar"]

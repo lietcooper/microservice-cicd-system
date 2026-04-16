@@ -91,45 +91,28 @@ jobs:
           path: '**/build/docs/javadoc/'
 
   docker:
-    name: Publish Docker Images
+    name: Build Docker Images
     needs: [test, static-analysis]
     runs-on: ubuntu-latest
-    permissions:
-      packages: write
-    env:
-      REGISTRY: ghcr.io
-      IMAGE_PREFIX: ghcr.io/cs7580-sea-sp26/d-team
+    # Images are built to verify correctness but not pushed.
+    # The private org repo does not grant GITHUB_TOKEN permission to write packages.
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/build-push-action@v6
         with:
           context: .
           target: server
-          push: true
-          tags: |
-            ${{ env.IMAGE_PREFIX }}/server:${{ github.ref_name }}
-            ${{ env.IMAGE_PREFIX }}/server:latest
+          push: false
       - uses: docker/build-push-action@v6
         with:
           context: .
           target: worker
-          push: true
-          tags: |
-            ${{ env.IMAGE_PREFIX }}/worker:${{ github.ref_name }}
-            ${{ env.IMAGE_PREFIX }}/worker:latest
+          push: false
       - uses: docker/build-push-action@v6
         with:
           context: .
           target: cli
-          push: true
-          tags: |
-            ${{ env.IMAGE_PREFIX }}/cli:${{ github.ref_name }}
-            ${{ env.IMAGE_PREFIX }}/cli:latest
+          push: false
 
   github-release:
     name: GitHub Release
