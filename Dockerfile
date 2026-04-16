@@ -35,8 +35,12 @@ RUN ./gradlew assemble --no-daemon
 # ============================================================
 FROM eclipse-temurin:17-jre AS server
 
-RUN apt-get update && apt-get install -y --no-install-recommends git \
-    && rm -rf /var/lib/apt/lists/*
+RUN set -e; \
+    for i in 1 2 3; do \
+        apt-get update && break || ([ $i -lt 3 ] && sleep $((i * 5)) && continue || exit 1); \
+    done && \
+    apt-get install -y --no-install-recommends git && \
+    rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user
 RUN groupadd -r cicd && useradd -r -g cicd -u 1000 cicd
@@ -73,8 +77,12 @@ ENTRYPOINT ["java", "-Djava.io.tmpdir=/tmp/cicd-workspaces", "-jar", "app.jar"]
 # ============================================================
 FROM eclipse-temurin:17-jre AS cli
 
-RUN apt-get update && apt-get install -y --no-install-recommends git \
-    && rm -rf /var/lib/apt/lists/*
+RUN set -e; \
+    for i in 1 2 3; do \
+        apt-get update && break || ([ $i -lt 3 ] && sleep $((i * 5)) && continue || exit 1); \
+    done && \
+    apt-get install -y --no-install-recommends git && \
+    rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user
 RUN groupadd -r cicd && useradd -r -g cicd -u 1000 cicd

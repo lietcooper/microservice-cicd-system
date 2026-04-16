@@ -13,7 +13,7 @@ build/
 
 *.md
 !README.md
-TODO.md
+
 !dev-docs
 !dev-docs/**/*.md
 .claude/
@@ -27,8 +27,6 @@ run-server.sh
 *.log
 pipeline.log
 server.log
-!sprint5-demo-walkthrough.md
-!sprint5-non-developer-guide.md
-!sprint5-developer-guide.md
 !system-health-check.md
 !FeatureStatus.md
+demo*
