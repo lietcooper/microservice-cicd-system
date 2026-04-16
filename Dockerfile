@@ -33,17 +33,12 @@ RUN ./gradlew assemble --no-daemon
 # ============================================================
 # Server target
 # ============================================================
-FROM eclipse-temurin:17-jre AS server
+FROM eclipse-temurin:17-jre-alpine AS server
 
-RUN set -e; \
-    for i in 1 2 3; do \
-        apt-get update && break || ([ $i -lt 3 ] && sleep $((i * 5)) && continue || exit 1); \
-    done && \
-    apt-get install -y --no-install-recommends git && \
-    rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache git
 
 # Create a non-root user
-RUN groupadd -r cicd && useradd -r -g cicd -u 1000 cicd
+RUN addgroup -S cicd && adduser -S -u 1000 -G cicd cicd
 WORKDIR /app
 COPY --from=build /app/server/build/libs/server-0.1.0.jar app.jar
 
@@ -75,17 +70,12 @@ ENTRYPOINT ["java", "-Djava.io.tmpdir=/tmp/cicd-workspaces", "-jar", "app.jar"]
 # ============================================================
 # CLI target
 # ============================================================
-FROM eclipse-temurin:17-jre AS cli
+FROM eclipse-temurin:17-jre-alpine AS cli
 
-RUN set -e; \
-    for i in 1 2 3; do \
-        apt-get update && break || ([ $i -lt 3 ] && sleep $((i * 5)) && continue || exit 1); \
-    done && \
-    apt-get install -y --no-install-recommends git && \
-    rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache git
 
 # Create a non-root user
-RUN groupadd -r cicd && useradd -r -g cicd -u 1000 cicd
+RUN addgroup -S cicd && adduser -S -u 1000 -G cicd cicd
 
 # Allow git to work with mounted volumes (ownership mismatch)
 # We set this globally so it applies to the 'cicd' user

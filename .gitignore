@@ -30,3 +30,4 @@ server.log
 !system-health-check.md
 !FeatureStatus.md
 demo*
+!K8S-SETUP.md
