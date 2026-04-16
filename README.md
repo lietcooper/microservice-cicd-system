@@ -302,4 +302,12 @@ Three CI/CD workflows run automatically and upload reports as downloadable artif
 
 To download: go to the **Actions** tab on GitHub, click a workflow run, and scroll to the **Artifacts** section at the bottom of the summary page.
 
-The Main and Release workflows also build and push Docker images to `ghcr.io/cs7580-sea-sp26/d-team/{server,worker,cli}`, accessible from the repository's **Packages** tab.
+The Main and Release workflows also build Docker images for server, worker, and cli.
+
+> **Note:** Because this repository is private under the `CS7580-SEA-SP26` organization, the GitHub Actions `GITHUB_TOKEN` does not have permission to push images to `ghcr.io`. The workflows build the images to verify they compile correctly, but do not push them to a registry. To build and use the images locally:
+>
+> ```bash
+> docker build --target server -t cicd-server:latest .
+> docker build --target worker -t cicd-worker:latest .
+> docker build --target cli -t cicd-cli:latest .
+> ```
