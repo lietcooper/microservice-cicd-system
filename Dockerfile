@@ -54,15 +54,13 @@ ENTRYPOINT ["java", "-jar", "app.jar"]
 # ============================================================
 FROM eclipse-temurin:17-jre AS worker
 
-# Create a non-root user and the workspace directory
-RUN groupadd -r cicd && useradd -r -g cicd -u 1000 cicd
-RUN mkdir -p /tmp/cicd-workspaces && chown -R cicd:cicd /tmp/cicd-workspaces
+RUN mkdir -p /tmp/cicd-workspaces && chown -R 1000:1000 /tmp/cicd-workspaces
 
 WORKDIR /app
 COPY --from=build /app/worker/build/libs/worker-0.1.0.jar app.jar
-RUN chown -R cicd:cicd /app
+RUN chown -R 1000:1000 /app
 
-USER cicd
+USER 1000
 
 EXPOSE 8081
 ENTRYPOINT ["java", "-Djava.io.tmpdir=/tmp/cicd-workspaces", "-jar", "app.jar"]
