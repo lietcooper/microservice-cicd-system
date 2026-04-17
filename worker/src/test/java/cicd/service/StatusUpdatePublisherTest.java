@@ -185,7 +185,7 @@ class StatusUpdatePublisherTest {
   @Test
   void jobCompletedSuccessPublishesSuccessStatus() {
     publisher.jobCompleted(
-        1L, "pipe", 1, "build", "compile", true);
+        1L, "pipe", 1, "build", "compile", true, false);
 
     ArgumentCaptor<StatusUpdateMessage> captor =
         ArgumentCaptor.forClass(StatusUpdateMessage.class);
@@ -200,7 +200,7 @@ class StatusUpdatePublisherTest {
   @Test
   void jobCompletedFailurePublishesFailedStatus() {
     publisher.jobCompleted(
-        1L, "pipe", 1, "build", "compile", false);
+        1L, "pipe", 1, "build", "compile", false, false);
 
     ArgumentCaptor<StatusUpdateMessage> captor =
         ArgumentCaptor.forClass(StatusUpdateMessage.class);

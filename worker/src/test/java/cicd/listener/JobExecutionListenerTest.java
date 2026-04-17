@@ -86,7 +86,7 @@ class JobExecutionListenerTest {
     // Docker fails in test env, so success=false is expected
     verify(statusPublisher).jobCompleted(
         eq(1L), eq("default"), eq(1), eq("build"), eq("compile"),
-        anyBoolean(), any(), any());
+        anyBoolean(), anyBoolean(), any(), any());
   }
 
   @Test

@@ -166,7 +166,8 @@ public class PipelineOrchestrationListener {
                     stage.getStageName(), job.name, job.allowFailure);
                 statusPublisher.jobCompleted(msg.getPipelineRunId(),
                     msg.getPipelineName(), msg.getRunNo(),
-                    stage.getStageName(), job.name, false);
+                    stage.getStageName(), job.name, false,
+                    job.allowFailure);
                 if (!job.allowFailure) {
                   failedRequiredJobs.add(job.name);
                 }

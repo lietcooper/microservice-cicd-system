@@ -222,26 +222,20 @@ kubectl port-forward svc/cicd-cicd-tempo 3200:3200 -n cicd
 
 ## 10. Verify the CLI
 
-If the launcher script is in `PATH`:
+Build the CLI jar and verify it runs:
 
 ```bash
-cicd --help
-```
-
-Otherwise:
-
-```bash
-./cicd --help
+./gradlew :cli:jar
+java -jar cli/build/libs/cli-0.1.0.jar --help
 ```
 
 Expected result:
-- the CLI help text is displayed
-- no Docker or image pull error is shown
+- the CLI help text is displayed listing `verify`, `dryrun`, `run`, `report`, `status` commands
 
-For pipeline commands, keep the server port-forward active and use `--server` if needed:
+For convenience in the steps below, create an alias:
 
 ```bash
-./cicd report --pipeline default --server http://localhost:8080
+alias cicd='java -jar cli/build/libs/cli-0.1.0.jar'
 ```
 
 ## 11. Successful Pipeline Smoke Test
@@ -249,41 +243,42 @@ For pipeline commands, keep the server port-forward active and use `--server` if
 Keep the server port-forward active, then run:
 
 ```bash
-./cicd run --repo-url https://github.com/lietcooper/success-demo-repo.git --name default --branch main --server http://localhost:8080
+cicd run --file .pipelines/demo-success.yaml \
+  --repo-url https://github.com/lietcooper/fail-demo-repo \
+  --server http://localhost:8080
 ```
 
 Expected result:
 - the CLI reports that the pipeline execution was queued
 - a pipeline name and run number are printed
 
-Then inspect the report:
+Wait ~10 seconds for the pipeline to complete, then inspect the report:
 
 ```bash
-./cicd report --pipeline default --server http://localhost:8080
-./cicd report --pipeline default --run 1 --server http://localhost:8080
-./cicd report --pipeline default --run 1 --stage build --server http://localhost:8080
-./cicd report --pipeline default --run 1 --stage build --job compile --server http://localhost:8080
+cicd report --pipeline demo-success --server http://localhost:8080
+cicd report --pipeline demo-success --run 1 --server http://localhost:8080
+cicd report --pipeline demo-success --run 1 --stage build --server http://localhost:8080
 ```
 
 Expected result:
-- a run appears for pipeline `default`
+- a run appears for pipeline `demo-success`
 - the run eventually becomes `SUCCESS`
-- stage and job detail endpoints return data
-
-If the demo pipeline produces artifacts, the job-level report should include artifact entries with `minio://...` locations.
+- the stage-level report includes an `artifacts:` section showing files stored in MinIO
 
 ## 12. Failing Pipeline Smoke Test
 
 Keep the server port-forward active, then run:
 
 ```bash
-./cicd run --repo-url https://github.com/lietcooper/fail-demo-repo.git --name default --branch main --server http://localhost:8080
+cicd run --file .pipelines/failure-false.yaml \
+  --repo-url https://github.com/lietcooper/fail-demo-repo \
+  --server http://localhost:8080
 ```
 
 Then inspect the report:
 
 ```bash
-./cicd report --pipeline default --server http://localhost:8080
+cicd report --pipeline failure-false --run 1 --server http://localhost:8080
 ```
 
 Expected result:
@@ -292,16 +287,10 @@ Expected result:
 
 ## 13. Optional Status Check
 
-Repository-level status:
-
-```bash
-./cicd status --repo https://github.com/lietcooper/success-demo-repo.git --server http://localhost:8080
-```
-
 Run-level status from a local pipeline file:
 
 ```bash
-./cicd status --file .pipelines/default.yaml --run 1 --server http://localhost:8080
+cicd status --file .pipelines/demo-success.yaml --run 1 --server http://localhost:8080
 ```
 
 Expected result:

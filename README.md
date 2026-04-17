@@ -14,15 +14,56 @@ Custom CI/CD system with:
 - `server`: REST API, Git snapshotting, report persistence
 - `worker`: pipeline orchestration and Docker execution
 
-## Infrastructure
+## Prerequisites
+
+- Java 17 (JDK)
+- Docker
+- For Kubernetes deployment: [minikube](https://minikube.sigs.k8s.io/) + [Helm 3](https://helm.sh/docs/intro/install/)
+
+## Quick Start (Kubernetes — recommended)
+
+Build images, deploy, and run a pipeline:
+
+```bash
+# 1. Build Docker images
+docker build --target server -t cicd-server:latest .
+docker build --target worker -t cicd-worker:latest .
+
+# 2. Load into minikube
+minikube image load cicd-server:latest
+minikube image load cicd-worker:latest
+
+# 3. Deploy via Helm (use local images, not registry)
+helm upgrade --install cicd ./helm/cicd -n cicd --create-namespace \
+  --set server.image.repository=cicd-server \
+  --set server.image.pullPolicy=IfNotPresent \
+  --set worker.image.repository=cicd-worker \
+  --set worker.image.pullPolicy=IfNotPresent
+
+# 4. Wait for pods
+kubectl get pods -n cicd   # all should be Running
+
+# 5. Port-forward the server
+kubectl port-forward svc/cicd-cicd-server 8080:8080 -n cicd &
+
+# 6. Build and use the CLI
+./gradlew :cli:jar
+java -jar cli/build/libs/cli-0.1.0.jar verify .pipelines/demo-success.yaml
+java -jar cli/build/libs/cli-0.1.0.jar run \
+  --file .pipelines/demo-success.yaml \
+  --repo-url https://github.com/lietcooper/fail-demo-repo \
+  --server http://localhost:8080
+```
+
+For the full deployment guide see [K8S-SETUP.md](K8S-SETUP.md). For post-deploy validation see [system-health-check.md](system-health-check.md).
+
+## Infrastructure (Local Dev Mode)
 
 Developer mode starts only PostgreSQL and RabbitMQ:
 
 ```bash
 docker compose up -d
 ```
-
-For the current full deployment path, use the Helm chart in `helm/cicd/` and the Kubernetes health-check guide in [system-health-check.md](system-health-check.md).
 
 Run the server:
 
@@ -50,7 +91,7 @@ Run locally through Gradle:
 ./gradlew :cli:run --args="verify .pipelines/default.yaml"
 ```
 
-Or run the jar:
+Or run the jar directly:
 
 ```bash
 java -jar cli/build/libs/cli-0.1.0.jar verify .pipelines/default.yaml
@@ -116,43 +157,68 @@ Query reports:
 
 ## Example Repositories
 
-After you push the local demo repos under `demo-repos/` to GitHub, set these two URLs:
+The demo pipelines use this public repository as the git source:
 
 ```bash
-export SUCCESS_REPO_URL="https://github.com/<org-or-user>/success-repo.git"
-export FAIL_REPO_URL="https://github.com/<org-or-user>/fail-repo.git"
+# Contains simple shell scripts that demo-success.yaml, failure-true.yaml, etc. reference
+export REPO_URL="https://github.com/lietcooper/fail-demo-repo"
 ```
 
 ## Evaluator Walkthrough
 
+All examples below assume the server is running (either via K8s port-forward or local `bootRun`) and the CLI jar is built (`./gradlew :cli:jar`). Alias for convenience:
+
+```bash
+alias cicd='java -jar cli/build/libs/cli-0.1.0.jar'
+```
+
 Validation failure example:
 
 ```bash
-./gradlew :cli:run --args="verify .pipelines/invalid-cycle.yaml"
+cicd verify .pipelines/invalid-cycle.yaml
 ```
 
-Successful pipeline example:
+Successful pipeline (with artifacts):
 
 ```bash
-./gradlew :cli:run --args="run --repo-url $SUCCESS_REPO_URL --name default --branch main"
-./gradlew :cli:run --args="report --pipeline default"
-./gradlew :cli:run --args="report --pipeline default --run 1"
-./gradlew :cli:run --args="report --pipeline default --run 1 --stage build"
-./gradlew :cli:run --args="report --pipeline default --run 1 --stage build --job compile"
+cicd run --file .pipelines/demo-success.yaml \
+  --repo-url https://github.com/lietcooper/fail-demo-repo \
+  --server http://localhost:8080
+# wait ~10s, then:
+cicd report --pipeline demo-success --run 1 --server http://localhost:8080
+cicd report --pipeline demo-success --run 1 --stage build --server http://localhost:8080
 ```
 
-Failed pipeline example:
+Parallel execution proof:
 
 ```bash
-./gradlew :cli:run --args="run --repo-url $FAIL_REPO_URL --name default --branch main"
-./gradlew :cli:run --args="report --pipeline default --run 2"
-./gradlew :cli:run --args="report --pipeline default --run 2 --stage test"
-./gradlew :cli:run --args="report --pipeline default --run 2 --stage test --job tests"
+cicd run --file .pipelines/parallel-test.yaml \
+  --repo-url https://github.com/lietcooper/fail-demo-repo \
+  --server http://localhost:8080
+# wait ~25s, then check that all 4 jobs share the same start time:
+cicd report --pipeline parallel-test --run 1 --stage run --server http://localhost:8080
 ```
 
-The local example repository sources are:
-- `demo-repos/success-repo`
-- `demo-repos/fail-repo`
+Allow-failures:
+
+```bash
+cicd run --file .pipelines/failure-true.yaml \
+  --repo-url https://github.com/lietcooper/fail-demo-repo \
+  --server http://localhost:8080
+# wait ~30s, then:
+cicd report --pipeline failure-true --run 1 --stage test --server http://localhost:8080
+# linter shows failures: true + FAILED, but pipeline is SUCCESS
+```
+
+Expected failure:
+
+```bash
+cicd run --file .pipelines/failure-false.yaml \
+  --repo-url https://github.com/lietcooper/fail-demo-repo \
+  --server http://localhost:8080
+# pipeline becomes FAILED (expected)
+cicd report --pipeline failure-false --run 1 --server http://localhost:8080
+```
 
 ## Kubernetes Deployment
 
@@ -169,10 +235,14 @@ All system components can be deployed to Kubernetes via the Helm chart in `helm/
 | Observability stack | Yes | Optional | OTel Collector, Prometheus, Loki, Tempo, Grafana |
 | CLI | No | N/A | Runs on developer machine, connects to server via HTTP |
 
-Quick deploy:
+Quick deploy (after building and loading images into minikube):
 
 ```bash
-helm upgrade --install cicd ./helm/cicd -n cicd --create-namespace
+helm upgrade --install cicd ./helm/cicd -n cicd --create-namespace \
+  --set server.image.repository=cicd-server \
+  --set server.image.pullPolicy=IfNotPresent \
+  --set worker.image.repository=cicd-worker \
+  --set worker.image.pullPolicy=IfNotPresent
 kubectl port-forward svc/cicd-cicd-server 8080:8080 -n cicd
 ```
 
@@ -236,15 +306,20 @@ kubectl port-forward svc/cicd-cicd-loki 3100:3100 -n cicd
 ### Kubernetes Deployment
 
 ```bash
-# Build and push images (from project root, linux/amd64 for EKS)
-docker buildx build --platform linux/amd64 --target server -t yskigpg/cicd-server:latest -f Dockerfile --push .
-docker buildx build --platform linux/amd64 --target worker -t yskigpg/cicd-worker:latest -f Dockerfile --push .
+# Build images locally
+docker build --target server -t cicd-server:latest .
+docker build --target worker -t cicd-worker:latest .
 
-# Deploy via Helm
-helm upgrade --install cicd ./helm/cicd -n cicd --create-namespace
+# Load into minikube
+minikube image load cicd-server:latest
+minikube image load cicd-worker:latest
 
-# Validate the deployment
-./validate-observability.sh
+# Deploy via Helm (point to local images)
+helm upgrade --install cicd ./helm/cicd -n cicd --create-namespace \
+  --set server.image.repository=cicd-server \
+  --set server.image.pullPolicy=IfNotPresent \
+  --set worker.image.repository=cicd-worker \
+  --set worker.image.pullPolicy=IfNotPresent
 ```
 
 ### Prometheus Alert Rules

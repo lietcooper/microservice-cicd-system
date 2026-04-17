@@ -120,15 +120,15 @@ public class StatusUpdatePublisher {
   /** Publishes a job-completed status update. */
   public void jobCompleted(Long pipelineRunId,
       String pipelineName, int runNo, String stageName,
-      String jobName, boolean success) {
+      String jobName, boolean success, boolean allowFailure) {
     jobCompleted(pipelineRunId, pipelineName, runNo,
-        stageName, jobName, success, null, null);
+        stageName, jobName, success, allowFailure, null, null);
   }
 
   /** Publishes a job-completed status update with artifact info. */
   public void jobCompleted(Long pipelineRunId,
       String pipelineName, int runNo, String stageName,
-      String jobName, boolean success,
+      String jobName, boolean success, boolean allowFailure,
       List<String> artifactPatterns,
       List<String> artifactStoragePaths) {
     StatusUpdateMessage msg = buildJob(
@@ -136,6 +136,7 @@ public class StatusUpdatePublisher {
         stageName, jobName);
     msg.setStatus(success ? "SUCCESS" : "FAILED");
     msg.setEndTime(OffsetDateTime.now());
+    msg.setAllowFailure(allowFailure);
     msg.setArtifactPatterns(artifactPatterns);
     msg.setArtifactStoragePaths(artifactStoragePaths);
     publish(msg);

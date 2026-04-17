@@ -96,10 +96,14 @@ docker buildx build --platform linux/amd64 --target worker -t <registry>/cicd-wo
 
 ## Deployment Option 1: All-in-K8s (bundled PostgreSQL + RabbitMQ)
 
-Deploy everything inside the cluster with defaults:
+Deploy everything inside the cluster. When using locally built images (minikube), override the image settings so Helm uses your local builds instead of pulling from a registry:
 
 ```bash
-helm install cicd ./helm/cicd -n cicd --create-namespace
+helm install cicd ./helm/cicd -n cicd --create-namespace \
+  --set server.image.repository=cicd-server \
+  --set server.image.pullPolicy=IfNotPresent \
+  --set worker.image.repository=cicd-worker \
+  --set worker.image.pullPolicy=IfNotPresent
 ```
 
 This deploys:

@@ -141,7 +141,7 @@ public class JobExecutionListener {
       statusPublisher.jobCompleted(msg.getPipelineRunId(),
           msg.getPipelineName(), msg.getRunNo(),
           msg.getStageName(), msg.getJobName(), result.ok(),
-          alignedPatterns, storedArtifacts);
+          msg.isAllowFailure(), alignedPatterns, storedArtifacts);
 
       eventPublisher.publishJobCompleted(msg.getPipelineRunId(),
           msg.getPipelineName(), msg.getRunNo(),

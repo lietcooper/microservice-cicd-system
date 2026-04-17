@@ -33,18 +33,15 @@ RUN ./gradlew assemble --no-daemon
 # ============================================================
 # Server target
 # ============================================================
-FROM eclipse-temurin:17-jre-alpine AS server
+FROM eclipse-temurin:17-jre AS server
 
-RUN apk add --no-cache git
+RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
 
-# Create a non-root user
-RUN addgroup -S cicd && adduser -S -u 1000 -G cicd cicd
 WORKDIR /app
 COPY --from=build /app/server/build/libs/server-0.1.0.jar app.jar
+RUN chown -R 1000:1000 /app
 
-# Ensure the app can write to its work directory
-RUN chown -R cicd:cicd /app
-USER cicd
+USER 1000
 
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
@@ -68,20 +65,15 @@ ENTRYPOINT ["java", "-Djava.io.tmpdir=/tmp/cicd-workspaces", "-jar", "app.jar"]
 # ============================================================
 # CLI target
 # ============================================================
-FROM eclipse-temurin:17-jre-alpine AS cli
+FROM eclipse-temurin:17-jre AS cli
 
-RUN apk add --no-cache git
+RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
 
-# Create a non-root user
-RUN addgroup -S cicd && adduser -S -u 1000 -G cicd cicd
-
-# Allow git to work with mounted volumes (ownership mismatch)
-# We set this globally so it applies to the 'cicd' user
 RUN git config --system --add safe.directory /workspace
 
 WORKDIR /workspace
 COPY --from=build /app/cli/build/libs/cli-0.1.0.jar /app/cli.jar
-RUN chown -R cicd:cicd /app
+RUN chown -R 1000:1000 /app
 
-USER cicd
+USER 1000
 ENTRYPOINT ["java", "-jar", "/app/cli.jar"]

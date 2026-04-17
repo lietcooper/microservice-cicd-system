@@ -1,12 +1,11 @@
 #!/usr/bin/env sh
-#./gradlew -q :cli:run --args="$*" 2>&1 | grep -v -E "^(FAILURE|BUILD|\*|>|$)"
 set -eu
 
-IMAGE="${CICD_CLI_IMAGE:-ghcr.io/cs7580-sea-sp26/d-team/cli:latest}"
-WORKDIR="${PWD}"
+JAR="cli/build/libs/cli-0.1.0.jar"
 
-exec docker run --rm \
-  --network host \
-  -v "${WORKDIR}:/workspace" \
-  -w /workspace \
-  "${IMAGE}" "$@"
+if [ ! -f "$JAR" ]; then
+  echo "CLI jar not found. Building..."
+  ./gradlew -q :cli:jar
+fi
+
+exec java -jar "$JAR" "$@"
