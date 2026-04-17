@@ -98,21 +98,9 @@ jobs:
     # The private org repo does not grant GITHUB_TOKEN permission to write packages.
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          target: server
-          push: false
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          target: worker
-          push: false
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          target: cli
-          push: false
+      - run: docker build --target server -t cicd-server:latest .
+      - run: docker build --target worker -t cicd-worker:latest .
+      - run: docker build --target cli -t cicd-cli:latest .
 
   github-release:
     name: GitHub Release
